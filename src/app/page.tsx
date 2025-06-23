@@ -3,10 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { sendMessageToBackend } from "@/lib/api";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import React from "react";
+
 
 export default function Home() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<JSX.Element[]>([]);
+  const [messages, setMessages] = useState<React.ReactNode[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef(
