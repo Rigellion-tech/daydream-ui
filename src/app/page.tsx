@@ -3,17 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import { sendMessageToBackend } from "@/lib/api";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
-import React from "react";
-
+import React, { ReactElement } from "react";
 
 export default function Home() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<React.ReactNode[]>([]);
+  const [messages, setMessages] = useState<ReactElement[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef(
-    localStorage.getItem("user_id") || `user-${Math.random().toString(36).substring(2, 10)}`
+    typeof window !== "undefined"
+      ? localStorage.getItem("user_id") || `user-${Math.random().toString(36).substring(2, 10)}`
+      : "user-temp"
   ).current;
 
   useEffect(() => {
@@ -41,11 +42,15 @@ export default function Home() {
 
   useEffect(() => {
     const saveMemory = async () => {
-      const plainMessages = messages
-        .filter((msg): msg is Exclude<typeof msg, null | undefined> => msg != null)
-        .map((msg) =>
-          typeof msg === "string" ? msg : msg.props?.children?.[1] || msg.props?.children || ""
-    );
+      const plainMessages = messages.map((msg) => {
+        if (typeof msg === "string") return msg;
+        if (React.isValidElement(msg)) {
+          const children = (msg as ReactElement).props?.children;
+          if (Array.isArray(children)) return children[1] || "";
+          return children || "";
+        }
+        return "";
+      });
 
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
@@ -53,7 +58,10 @@ export default function Home() {
         body: JSON.stringify({ user_id, messages: plainMessages }),
       });
     };
-    if (messages.length > 0) saveMemory();
+
+    if (messages.length > 0) {
+      saveMemory().catch((err) => console.error("Failed to save memory:", err));
+    }
   }, [messages, user_id]);
 
   const simulateTyping = async (text: string) => {
@@ -131,7 +139,7 @@ export default function Home() {
           ...prev,
           <div key={prev.length} className="self-start space-y-2">
             <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            {"🤖: ✅ Here's your transformation:"}
+              {"🤖: ✅ Here's your transformation:"}
             </p>
 
             <img
