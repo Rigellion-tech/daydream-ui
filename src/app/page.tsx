@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { ReactElement, useState, useRef, useEffect } from "react";
 import { sendMessageToBackend } from "@/lib/api";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
-import React, { ReactElement } from "react";
 
 export default function Home() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ReactElement[]>([]);
+  const [messages, setMessages] = useState<(string | ReactElement)[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const messageListRef = useRef<HTMLDivElement>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
   const user_id = useRef(
     typeof window !== "undefined"
       ? localStorage.getItem("user_id") || `user-${Math.random().toString(36).substring(2, 10)}`
@@ -29,7 +28,9 @@ export default function Home() {
         const restored = data.messages.map((msg: string, i: number) => (
           <div
             key={i}
-            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${msg.startsWith("🧑") ? "bg-blue-100 dark:bg-blue-800" : "bg-gray-200 dark:bg-gray-700"} text-black dark:text-white`}
+            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${
+              msg.startsWith("🧑") ? "bg-blue-100 dark:bg-blue-800" : "bg-gray-200 dark:bg-gray-700"
+            } text-black dark:text-white`}
           >
             {msg}
           </div>
@@ -44,11 +45,13 @@ export default function Home() {
     const saveMemory = async () => {
       const plainMessages = messages.map((msg) => {
         if (typeof msg === "string") return msg;
+
         if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement).props?.children;
-          if (Array.isArray(children)) return children[1] || "";
-          return children || "";
+          const flat = React.Children.toArray(msg.props.children)
+            .filter((c) => typeof c === "string") as string[];
+          return flat.join("").replace(/^🧑:\s*/, "");
         }
+
         return "";
       });
 
