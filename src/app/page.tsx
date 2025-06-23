@@ -41,9 +41,12 @@ export default function Home() {
 
   useEffect(() => {
     const saveMemory = async () => {
-      const plainMessages = messages.map((msg) =>
-        typeof msg === "string" ? msg : msg.props?.children?.[1] || msg.props?.children || ""
-      );
+      const plainMessages = messages
+        .filter((msg): msg is Exclude<typeof msg, null | undefined> => msg != null)
+        .map((msg) =>
+          typeof msg === "string" ? msg : msg.props?.children?.[1] || msg.props?.children || ""
+    );
+
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
