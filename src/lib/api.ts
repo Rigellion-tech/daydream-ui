@@ -60,8 +60,12 @@ export default async function generateImage(
     if (data.imageUrl) return data.imageUrl;
 
     throw new Error(data.error || "no imageUrl in response");
-  } catch (err: any) {
-    console.error("🔥 generateImage error:", err);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("🔥 generateImage error:", err.message);
+    } else {
+      console.error("🔥 generateImage error (non-Error):", err);
+    }
     return "";
   }
 }
