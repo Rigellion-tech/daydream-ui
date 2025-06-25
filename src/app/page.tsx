@@ -1,16 +1,17 @@
 "use client";
 
-import React, { ReactElement, ReactNode, useState, useRef, useEffect } from "react";
-import Image from "next/image";
-import { sendMessageToBackend } from "@/lib/api";
+import { useState, useRef, useEffect } from "react";
+import { sendMessageToBackend, generateImage } from "@/lib/api";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import React, { ReactElement } from "react";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<(string | ReactElement)[]>([]);
+  const [useHighQuality, setUseHighQuality] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef(
     typeof window !== "undefined"
       ? localStorage.getItem("user_id") || `user-${Math.random().toString(36).substring(2, 10)}`
@@ -23,21 +24,13 @@ export default function Home() {
 
   useEffect(() => {
     const fetchMemory = async () => {
-      const res = await fetch(
-        `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
-      );
+      const res = await fetch(`https://daydreamforge.onrender.com/memory?user_id=${user_id}`);
       const data = await res.json();
       if (data.messages) {
         const restored = data.messages.map((msg: string, i: number) => (
           <div
             key={i}
-            className={`self-${
-              msg.startsWith("🧑") ? "end" : "start"
-            } p-2 rounded-lg max-w-[80%] ${
-              msg.startsWith("🧑")
-                ? "bg-blue-100 dark:bg-blue-800"
-                : "bg-gray-200 dark:bg-gray-700"
-            } text-black dark:text-white`}
+            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${msg.startsWith("🧑") ? "bg-blue-100 dark:bg-blue-800" : "bg-gray-200 dark:bg-gray-700"} text-black dark:text-white`}
           >
             {msg}
           </div>
@@ -52,16 +45,11 @@ export default function Home() {
     const saveMemory = async () => {
       const plainMessages = messages.map((msg) => {
         if (typeof msg === "string") return msg;
-
         if (React.isValidElement(msg)) {
-          const element = msg as ReactElement<{ children?: ReactNode }>;
-          const children = element.props.children;
-          const flat = React.Children.toArray(children).filter(
-            (c): c is string => typeof c === "string"
-          );
-          return flat.join("").replace(/^🧑:\s*/, "");
+          const children: any = (msg as ReactElement).props?.children;
+          if (Array.isArray(children)) return children[1] || "";
+          return typeof children === "string" ? children : "";
         }
-
         return "";
       });
 
@@ -73,9 +61,7 @@ export default function Home() {
     };
 
     if (messages.length > 0) {
-      saveMemory().catch((err) =>
-        console.error("Failed to save memory:", err)
-      );
+      saveMemory().catch((err) => console.error("Failed to save memory:", err));
     }
   }, [messages, user_id]);
 
@@ -88,10 +74,7 @@ export default function Home() {
         const last = prev.slice(0, -1);
         return [
           ...last,
-          <div
-            key={prev.length}
-            className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-          >
+          <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
             🤖: {current}
           </div>,
         ];
@@ -105,10 +88,7 @@ export default function Home() {
     const userMessage = input;
     setMessages((prev) => [
       ...prev,
-      <div
-        key={prev.length}
-        className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-      >
+      <div key={prev.length} className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
         🧑: {userMessage}
       </div>,
     ]);
@@ -116,96 +96,32 @@ export default function Home() {
 
     setMessages((prev) => [
       ...prev,
-      <div key={prev.length} className="self-start text-gray-500 italic">
-        🤖 is typing...
-      </div>,
+      <div key={prev.length} className="self-start text-gray-500 italic">🤖 is typing...</div>,
     ]);
 
-    const response = await sendMessageToBackend(userMessage);
-    await simulateTyping(response);
-  };
-
-  const handleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setMessages((prev) => [
-      ...prev,
-      <div
-        key={prev.length}
-        className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-      >
-        🧑: [Uploaded an image]
-      </div>,
-    ]);
-    const imageUrl = await uploadImageToCloudinary(file);
-
-    if (imageUrl) {
-      setMessages((prev) => [
-        ...prev,
-        <div
-          key={prev.length}
-          className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-        >
-          🤖: Got your image. Generating transformation...
-        </div>,
-      ]);
-
-      const result = await fetch(
-        "https://daydreamforge.onrender.com/generate-image",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: "Create a dream version of this person.",
-            identity_image_url: imageUrl,
-          }),
-        }
-      );
-
-      const data = await result.json();
-      if (data.image_url) {
+    if (/\b(generate|draw|imagine|picture|render|image)\b/i.test(userMessage)) {
+      const imageUrl = await generateImage(userMessage, useHighQuality);
+      if (imageUrl) {
         setMessages((prev) => [
           ...prev,
           <div key={prev.length} className="self-start space-y-2">
             <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              {"🤖: ✅ Here's your transformation:"}
+              {"🤖: ✅ Here's your dream image:"}
             </p>
-
-            <Image
-              src={data.image_url}
-              alt="Generated"
-              width={500}
-              height={500}
-              className="max-w-full rounded-lg border border-gray-300 dark:border-gray-700"
-            />
+            <img src={imageUrl} alt="AI Generated" className="max-w-full rounded-lg border border-gray-300 dark:border-gray-700" />
           </div>,
         ]);
       } else {
         setMessages((prev) => [
           ...prev,
-          <div
-            key={prev.length}
-            className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-          >
+          <div key={prev.length} className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
             🤖: ❌ Image generation failed.
           </div>,
         ]);
       }
     } else {
-      setMessages((prev) => [
-        ...prev,
-        <div
-          key={prev.length}
-          className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-        >
-          🤖: ❌ Failed to upload image.
-        </div>,
-      ]);
+      const response = await sendMessageToBackend(userMessage);
+      await simulateTyping(response);
     }
   };
 
@@ -230,12 +146,18 @@ export default function Home() {
           >
             Clear Chat 🗑️
           </button>
+          <label className="text-sm text-gray-600 dark:text-gray-300">
+            <input
+              type="checkbox"
+              className="mr-1"
+              checked={useHighQuality}
+              onChange={() => setUseHighQuality((v) => !v)}
+            />
+            High Quality (Segmind)
+          </label>
         </div>
 
-        <div
-          ref={messageListRef}
-          className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900"
-        >
+        <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900">
           {messages.map((msg, i) => (
             <div key={i}>{msg}</div>
           ))}
@@ -268,7 +190,7 @@ export default function Home() {
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleImageUpload}
+            onChange={() => {}}
             className="hidden"
             accept="image/*"
           />

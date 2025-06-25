@@ -1,6 +1,9 @@
 export async function sendMessageToBackend(message: string): Promise<string> {
   try {
-    const user_id = localStorage.getItem("user_id");
+    const user_id =
+      typeof window !== "undefined"
+        ? localStorage.getItem("user_id") || "user-temp"
+        : "user-temp";
 
     const response = await fetch("https://daydreamforge.onrender.com/chat", {
       method: "POST",
