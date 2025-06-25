@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { sendMessageToBackend, generateImage } from "@/lib/api";
-import { uploadImageToCloudinary } from "@/lib/cloudinary";
+import generateImage, { sendMessageToBackend } from "@/lib/api";  // default + named
 import React, { ReactElement } from "react";
 
 export default function Home() {
@@ -14,7 +13,8 @@ export default function Home() {
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef(
     typeof window !== "undefined"
-      ? localStorage.getItem("user_id") || `user-${Math.random().toString(36).substring(2, 10)}`
+      ? localStorage.getItem("user_id") ||
+        `user-${Math.random().toString(36).substring(2, 10)}`
       : "user-temp"
   ).current;
 
@@ -24,13 +24,21 @@ export default function Home() {
 
   useEffect(() => {
     const fetchMemory = async () => {
-      const res = await fetch(`https://daydreamforge.onrender.com/memory?user_id=${user_id}`);
+      const res = await fetch(
+        `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
+      );
       const data = await res.json();
       if (data.messages) {
         const restored = data.messages.map((msg: string, i: number) => (
           <div
             key={i}
-            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${msg.startsWith("🧑") ? "bg-blue-100 dark:bg-blue-800" : "bg-gray-200 dark:bg-gray-700"} text-black dark:text-white`}
+            className={`self-${
+              msg.startsWith("🧑") ? "end" : "start"
+            } p-2 rounded-lg max-w-[80%] ${
+              msg.startsWith("🧑")
+                ? "bg-blue-100 dark:bg-blue-800"
+                : "bg-gray-200 dark:bg-gray-700"
+            } text-black dark:text-white`}
           >
             {msg}
           </div>
@@ -46,7 +54,9 @@ export default function Home() {
       const plainMessages = messages.map((msg) => {
         if (typeof msg === "string") return msg;
         if (React.isValidElement(msg)) {
-          const children: any = (msg as ReactElement).props?.children;
+          // typed as React.ReactNode instead of `any`
+          const children = (msg as ReactElement<{ children: React.ReactNode }>).props
+            .children;
           if (Array.isArray(children)) return children[1] || "";
           return typeof children === "string" ? children : "";
         }
@@ -61,20 +71,24 @@ export default function Home() {
     };
 
     if (messages.length > 0) {
-      saveMemory().catch((err) => console.error("Failed to save memory:", err));
+      saveMemory().catch((err) =>
+        console.error("Failed to save memory:", err)
+      );
     }
   }, [messages, user_id]);
 
   const simulateTyping = async (text: string) => {
     const typingSpeed = 30;
-    let current = "";
     for (let i = 0; i <= text.length; i++) {
-      current = text.slice(0, i);
+      const current = text.slice(0, i);
       setMessages((prev) => {
         const last = prev.slice(0, -1);
         return [
           ...last,
-          <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          <div
+            key={prev.length}
+            className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+          >
             🤖: {current}
           </div>,
         ];
@@ -88,7 +102,10 @@ export default function Home() {
     const userMessage = input;
     setMessages((prev) => [
       ...prev,
-      <div key={prev.length} className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+      <div
+        key={prev.length}
+        className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+      >
         🧑: {userMessage}
       </div>,
     ]);
@@ -96,7 +113,12 @@ export default function Home() {
 
     setMessages((prev) => [
       ...prev,
-      <div key={prev.length} className="self-start text-gray-500 italic">🤖 is typing...</div>,
+      <div
+        key={prev.length}
+        className="self-start text-gray-500 italic"
+      >
+        🤖 is typing...
+      </div>,
     ]);
 
     if (/\b(generate|draw|imagine|picture|render|image)\b/i.test(userMessage)) {
@@ -106,15 +128,22 @@ export default function Home() {
           ...prev,
           <div key={prev.length} className="self-start space-y-2">
             <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              {"🤖: ✅ Here's your dream image:"}
+              ✅ Here's your dream image:
             </p>
-            <img src={imageUrl} alt="AI Generated" className="max-w-full rounded-lg border border-gray-300 dark:border-gray-700" />
+            <img
+              src={imageUrl}
+              alt="AI Generated"
+              className="max-w-full rounded-lg border border-gray-300 dark:border-gray-700"
+            />
           </div>,
         ]);
       } else {
         setMessages((prev) => [
           ...prev,
-          <div key={prev.length} className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          <div
+            key={prev.length}
+            className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+          >
             🤖: ❌ Image generation failed.
           </div>,
         ]);
@@ -136,7 +165,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-white dark:bg-black text-black dark:text-white">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-8">💬 DayDream AI Assistant</h1>
+      <h1 className="text-3xl sm:text-4xl font-bold mb-8">
+        💬 DayDream AI Assistant
+      </h1>
 
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
@@ -157,7 +188,10 @@ export default function Home() {
           </label>
         </div>
 
-        <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900">
+        <div
+          ref={messageListRef}
+          className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900"
+        >
           {messages.map((msg, i) => (
             <div key={i}>{msg}</div>
           ))}
