@@ -128,7 +128,7 @@ export default function Home() {
           ...prev,
           <div key={prev.length} className="self-start space-y-2">
             <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              ✅ Here's your dream image:
+              ✅ Here&apos;s your dream image:
             </p>
             <img
               src={imageUrl}
