@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import generateImage, { sendMessageToBackend } from "@/lib/api";  // default + named
+import Image from "next/image";
+import generateImage, { sendMessageToBackend } from "@/lib/api";
 import React, { ReactElement } from "react";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<(string | ReactElement)[]>([]);
   const [useHighQuality, setUseHighQuality] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+
   const user_id = useRef(
     typeof window !== "undefined"
       ? localStorage.getItem("user_id") ||
@@ -18,12 +21,14 @@ export default function Home() {
       : "user-temp"
   ).current;
 
+  // Persist user_id
   useEffect(() => {
     localStorage.setItem("user_id", user_id);
   }, [user_id]);
 
+  // Fetch saved memory
   useEffect(() => {
-    const fetchMemory = async () => {
+    (async () => {
       const res = await fetch(
         `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
       );
@@ -45,16 +50,16 @@ export default function Home() {
         ));
         setMessages(restored);
       }
-    };
-    fetchMemory();
+    })();
   }, [user_id]);
 
+  // Save memory on change
   useEffect(() => {
-    const saveMemory = async () => {
-      const plainMessages = messages.map((msg) => {
+    if (!messages.length) return;
+    (async () => {
+      const plain = messages.map((msg) => {
         if (typeof msg === "string") return msg;
         if (React.isValidElement(msg)) {
-          // typed as React.ReactNode instead of `any`
           const children = (msg as ReactElement<{ children: React.ReactNode }>).props
             .children;
           if (Array.isArray(children)) return children[1] || "";
@@ -62,99 +67,141 @@ export default function Home() {
         }
         return "";
       });
-
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, messages: plainMessages }),
+        body: JSON.stringify({ user_id, messages: plain }),
       });
-    };
-
-    if (messages.length > 0) {
-      saveMemory().catch((err) =>
-        console.error("Failed to save memory:", err)
-      );
-    }
+    })().catch(console.error);
   }, [messages, user_id]);
 
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  // Typing simulation
   const simulateTyping = async (text: string) => {
-    const typingSpeed = 30;
+    const speed = 30;
     for (let i = 0; i <= text.length; i++) {
-      const current = text.slice(0, i);
+      const slice = text.slice(0, i);
       setMessages((prev) => {
-        const last = prev.slice(0, -1);
+        const base = prev.slice(0, -1);
         return [
-          ...last,
+          ...base,
           <div
             key={prev.length}
             className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
           >
-            🤖: {current}
+            🤖: {slice}
           </div>,
         ];
       });
-      await new Promise((res) => setTimeout(res, typingSpeed));
+      await new Promise((r) => setTimeout(r, speed));
     }
   };
 
+  // Handle text send
   const handleSend = async () => {
-    if (!input.trim()) return;
-    const userMessage = input;
+    if (!input.trim() || loading) return;
+    setLoading(true);
+
+    // add user bubble
     setMessages((prev) => [
       ...prev,
       <div
         key={prev.length}
         className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
       >
-        🧑: {userMessage}
+        🧑: {input}
       </div>,
     ]);
-    setInput("");
 
+    // placeholder bot bubble
     setMessages((prev) => [
       ...prev,
-      <div
-        key={prev.length}
-        className="self-start text-gray-500 italic"
-      >
+      <div key={prev.length} className="self-start italic text-gray-500">
         🤖 is typing...
       </div>,
     ]);
 
-    if (/\b(generate|draw|imagine|picture|render|image)\b/i.test(userMessage)) {
-      const imageUrl = await generateImage(userMessage, useHighQuality);
-      if (imageUrl) {
-        setMessages((prev) => [
-          ...prev,
-          <div key={prev.length} className="self-start space-y-2">
-            <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              ✅ Here&apos;s your dream image:
-            </p>
-            <img
-              src={imageUrl}
-              alt="AI Generated"
-              className="max-w-full rounded-lg border border-gray-300 dark:border-gray-700"
-            />
-          </div>,
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          <div
-            key={prev.length}
-            className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-          >
-            🤖: ❌ Image generation failed.
-          </div>,
-        ]);
-      }
+    // image vs chat
+    if (/\b(generate|draw|imagine|picture|render|image)\b/i.test(input)) {
+      const url = await generateImage(input, useHighQuality);
+      setMessages((prev) =>
+        prev.slice(0, -1).concat(
+          url ? (
+            <div key={prev.length} className="self-start space-y-2">
+              <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+                ✅ Here&apos;s your dream image:
+              </p>
+              <Image
+                src={url}
+                alt="AI Generated"
+                width={512}
+                height={512}
+                className="rounded-lg border border-gray-300 dark:border-gray-700"
+              />
+            </div>
+          ) : (
+            <div
+              key={prev.length}
+              className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+            >
+              🤖: ❌ Image generation failed.
+            </div>
+          )
+        )
+      );
     } else {
-      const response = await sendMessageToBackend(userMessage);
-      await simulateTyping(response);
+      const resp = await sendMessageToBackend(input);
+      await simulateTyping(resp);
     }
+
+    setInput("");
+    setLoading(false);
   };
 
-  const handleClearChat = () => {
+  // Handle file upload
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+
+    // upload to Cloudinary
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", "YOUR_UPLOAD_PRESET");
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload",
+      { method: "POST", body: form }
+    );
+    const { secure_url } = await res.json();
+
+    // add to chat
+    setMessages((prev) => [
+      ...prev,
+      <div key={prev.length} className="self-end space-y-1">
+        <p className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          🧑 sent an image:
+        </p>
+        <Image
+          src={secure_url}
+          alt="User upload"
+          width={256}
+          height={256}
+          className="rounded-lg border border-gray-300 dark:border-gray-700"
+        />
+      </div>,
+    ]);
+
+    e.target.value = "";
+    setLoading(false);
+  };
+
+  // Clear chat
+  const handleClear = () => {
     setMessages([]);
     fetch("https://daydreamforge.onrender.com/memory", {
       method: "POST",
@@ -165,22 +212,21 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-white dark:bg-black text-black dark:text-white">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-8">
-        💬 DayDream AI Assistant
+      <h1 className="text-3xl sm:text-4xl font-bold mb-8 flex items-center gap-2">
+        <span>💬</span> DayDream AI Assistant
       </h1>
 
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
           <button
+            onClick={handleClear}
             className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-            onClick={handleClearChat}
           >
             Clear Chat 🗑️
           </button>
-          <label className="text-sm text-gray-600 dark:text-gray-300">
+          <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
             <input
               type="checkbox"
-              className="mr-1"
               checked={useHighQuality}
               onChange={() => setUseHighQuality((v) => !v)}
             />
@@ -191,6 +237,7 @@ export default function Home() {
         <div
           ref={messageListRef}
           className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900"
+          aria-live="polite"
         >
           {messages.map((msg, i) => (
             <div key={i}>{msg}</div>
@@ -205,28 +252,31 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={loading}
           />
-
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={handleSend}
+            disabled={loading}
+            className={`px-4 py-2 rounded text-white ${
+              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            Send
+            {loading ? "Sending…" : "Send"}
           </button>
-
           <button
             onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
             className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
           >
             📎
           </button>
-
           <input
             type="file"
             ref={fileInputRef}
-            onChange={() => {}}
+            onChange={handleFile}
             className="hidden"
             accept="image/*"
+            disabled={loading}
           />
         </div>
       </div>
