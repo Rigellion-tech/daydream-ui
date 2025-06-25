@@ -44,8 +44,8 @@ export default async function generateImage(
         ? localStorage.getItem("user_id") || "user-temp"
         : "user-temp";
 
-    const response = await fetch(
-      "https://daydreamforge.onrender.com/image", // ← adjust path if your backend uses /generate or /generate-image
+    const res = await fetch(
+      "https://daydreamforge.onrender.com/image", // ← make sure this matches your Flask route!
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,15 +53,16 @@ export default async function generateImage(
       }
     );
 
-    interface ImageResponse { imageUrl?: string; error?: string; }
+    console.log("🖼 /generate-image status:", res.status);
+    const data = await res.json();
+    console.log("🖼 /generate-image body:", data);
 
-    const data: ImageResponse = await response.json();
     if (data.imageUrl) return data.imageUrl;
 
-    console.error("Image API error:", data.error || "no URL returned");
-    return "";
-  } catch (err) {
-    console.error("GenerateImage error:", err);
+    throw new Error(data.error || "no imageUrl in response");
+  } catch (err: any) {
+    console.error("🔥 generateImage error:", err);
     return "";
   }
 }
+
