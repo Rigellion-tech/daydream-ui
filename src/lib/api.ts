@@ -1,6 +1,6 @@
 // src/lib/api.ts
 
-// 1) Give your responses a real interface instead of `any`
+// 1) Typed interfaces for responses
 interface ChatResponse {
   response?: string;
   error?: string;
@@ -16,7 +16,7 @@ interface ImageResponse {
  */
 export async function sendMessageToBackend(message: string): Promise<string> {
   try {
-    const user_id = 
+    const user_id =
       typeof window !== "undefined"
         ? localStorage.getItem("user_id") || "user-temp"
         : "user-temp";
@@ -31,12 +31,11 @@ export async function sendMessageToBackend(message: string): Promise<string> {
     const text = await res.text();
     console.log("💬 /chat raw response:", text);
 
-    // 2) Parse into a typed interface
     let data: ChatResponse;
     try {
       data = JSON.parse(text) as ChatResponse;
-    } catch (error: unknown) {
-      console.error("💬 /chat JSON parse error:", error);
+    } catch {
+      console.error("💬 /chat JSON parse failed");
       return "[Invalid JSON from chat]";
     }
 
@@ -81,7 +80,7 @@ export default async function generateImage(
     let data: ImageResponse;
     try {
       data = JSON.parse(text) as ImageResponse;
-    } catch (error: unknown) {
+    } catch {
       throw new Error("Invalid JSON from image endpoint");
     }
 
