@@ -1,11 +1,22 @@
 // src/lib/api.ts
 
+// 1) Give your responses a real interface instead of `any`
+interface ChatResponse {
+  response?: string;
+  error?: string;
+}
+
+interface ImageResponse {
+  imageUrl?: string;
+  error?: string;
+}
+
 /**
  * Call your Flask backend chat endpoint.
  */
 export async function sendMessageToBackend(message: string): Promise<string> {
   try {
-    const user_id =
+    const user_id = 
       typeof window !== "undefined"
         ? localStorage.getItem("user_id") || "user-temp"
         : "user-temp";
@@ -20,36 +31,32 @@ export async function sendMessageToBackend(message: string): Promise<string> {
     const text = await res.text();
     console.log("💬 /chat raw response:", text);
 
-    let data: any;
+    // 2) Parse into a typed interface
+    let data: ChatResponse;
     try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      console.error("💬 /chat JSON parse error:", parseErr);
+      data = JSON.parse(text) as ChatResponse;
+    } catch (error: unknown) {
+      console.error("💬 /chat JSON parse error:", error);
       return "[Invalid JSON from chat]";
     }
 
     if (!res.ok) {
-      console.error("💬 /chat non-OK response:", data);
+      console.error("💬 /chat error:", data.error || res.status);
       return `[Chat API error: ${data.error || res.status}]`;
     }
 
-    return data.response || "[No response]";
+    return data.response ?? "[No response]";
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("💬 sendMessageToBackend error:", err.message);
-    } else {
-      console.error("💬 sendMessageToBackend non-Error:", err);
-    }
+    console.error(
+      "💬 sendMessageToBackend error:",
+      err instanceof Error ? err.message : err
+    );
     return "[Error connecting to backend]";
   }
 }
 
 /**
  * Call your Flask backend image-generation endpoint.
- *
- * @param prompt the text prompt to generate
- * @param highQuality whether to use the fallback high-quality Segmind route
- * @returns URL of the generated image (or empty string on failure)
  */
 export default async function generateImage(
   prompt: string,
@@ -71,11 +78,10 @@ export default async function generateImage(
     const text = await res.text();
     console.log("🖼 /image raw response:", text);
 
-    // Try to parse JSON
-    let data: { imageUrl?: string; error?: string };
+    let data: ImageResponse;
     try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
+      data = JSON.parse(text) as ImageResponse;
+    } catch (error: unknown) {
       throw new Error("Invalid JSON from image endpoint");
     }
 
@@ -85,17 +91,16 @@ export default async function generateImage(
       );
     }
 
-    if (data.imageUrl) {
-      return data.imageUrl;
-    } else {
+    if (!data.imageUrl) {
       throw new Error(data.error || "no imageUrl in response");
     }
+
+    return data.imageUrl;
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("🔥 generateImage error:", err.message);
-    } else {
-      console.error("🔥 generateImage error (non-Error):", err);
-    }
+    console.error(
+      "🔥 generateImage error:",
+      err instanceof Error ? err.message : err
+    );
     return "";
   }
 }
