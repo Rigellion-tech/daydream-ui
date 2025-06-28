@@ -1,105 +1,109 @@
 // src/lib/api.ts
 
-// 1) Typed interfaces for responses
+// --- Typed interfaces for API responses ---
 interface ChatResponse {
   response?: string;
   error?: string;
 }
-
 interface ImageResponse {
   imageUrl?: string;
   error?: string;
 }
 
+// --- Helper to manage or generate a persistent user ID ---
+function getUserId(): string {
+  if (typeof window === 'undefined') return 'user-temp';
+  let id = localStorage.getItem('user_id');
+  if (!id) {
+    id = `user-${Math.random().toString(36).substring(2, 10)}`;
+    localStorage.setItem('user_id', id);
+  }
+  return id;
+}
+
 /**
- * Call your Flask backend chat endpoint.
+ * Send a single chat message to the backend and return the full reply.
  */
-export async function sendMessageToBackend(message: string): Promise<string> {
+export async function sendMessageToBackend(
+  message: string
+): Promise<string> {
+  const user_id = getUserId();
   try {
-    const user_id =
-      typeof window !== "undefined"
-        ? localStorage.getItem("user_id") || "user-temp"
-        : "user-temp";
-
-    const res = await fetch("https://daydreamforge.onrender.com/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, user_id }),
-    });
-
-    console.log("💬 /chat status:", res.status, res.statusText);
-    const text = await res.text();
-    console.log("💬 /chat raw response:", text);
-
-    let data: ChatResponse;
-    try {
-      data = JSON.parse(text) as ChatResponse;
-    } catch {
-      console.error("💬 /chat JSON parse failed");
-      return "[Invalid JSON from chat]";
-    }
-
-    if (!res.ok) {
-      console.error("💬 /chat error:", data.error || res.status);
-      return `[Chat API error: ${data.error || res.status}]`;
-    }
-
-    return data.response ?? "[No response]";
-  } catch (err: unknown) {
-    console.error(
-      "💬 sendMessageToBackend error:",
-      err instanceof Error ? err.message : err
+    const res = await fetch(
+      'https://daydreamforge.onrender.com/chat',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, user_id }),
+      }
     );
-    return "[Error connecting to backend]";
+    const data = (await res.json()) as ChatResponse;
+    if (!res.ok || data.error) {
+      console.error(`Chat API error: ${data.error || res.status}`);
+      return data.error ?? '';
+    }
+    return data.response ?? '';
+  } catch (err) {
+    console.error('sendMessageToBackend failed:', err);
+    return '';
   }
 }
 
 /**
- * Call your Flask backend image-generation endpoint.
+ * Request an AI-generated image from the backend.
  */
-export default async function generateImage(
+export async function generateImage(
   prompt: string,
   highQuality = false
 ): Promise<string> {
+  const user_id = getUserId();
   try {
-    const user_id =
-      typeof window !== "undefined"
-        ? localStorage.getItem("user_id") || "user-temp"
-        : "user-temp";
-
-    const res = await fetch("https://daydreamforge.onrender.com/image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, useHighQuality: highQuality, user_id }),
-    });
-
-    console.log("🖼 /image status:", res.status, res.statusText);
-    const text = await res.text();
-    console.log("🖼 /image raw response:", text);
-
-    let data: ImageResponse;
-    try {
-      data = JSON.parse(text) as ImageResponse;
-    } catch {
-      throw new Error("Invalid JSON from image endpoint");
-    }
-
-    if (!res.ok) {
-      throw new Error(
-        `Image API error (${res.status}): ${data.error || "no error message"}`
-      );
-    }
-
-    if (!data.imageUrl) {
-      throw new Error(data.error || "no imageUrl in response");
-    }
-
-    return data.imageUrl;
-  } catch (err: unknown) {
-    console.error(
-      "🔥 generateImage error:",
-      err instanceof Error ? err.message : err
+    const res = await fetch(
+      'https://daydreamforge.onrender.com/image',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, useHighQuality: highQuality, user_id }),
+      }
     );
-    return "";
+    const data = (await res.json()) as ImageResponse;
+    if (!res.ok || data.error || !data.imageUrl) {
+      console.error(`Image API error: ${data.error || res.status}`);
+      return '';
+    }
+    return data.imageUrl;
+  } catch (err) {
+    console.error('generateImage failed:', err);
+    return '';
   }
+}
+
+/**
+ * Stream chat responses token-by-token in real time.
+ * Calls onDelta() for each new text chunk, onDone() when complete, onError() on failure.
+ */
+export function streamChat(
+  message: string,
+  onDelta: (chunk: string) => void,
+  onDone: () => void,
+  onError: (err: string) => void
+): EventSource {
+  const user_id = getUserId();
+  const params = new URLSearchParams({ user_id, message });
+  const url = `https://daydreamforge.onrender.com/chat/stream?${params}`;
+  const es = new EventSource(url);
+
+  es.onmessage = (e) => {
+    if (e.data) onDelta(e.data);
+  };
+  es.addEventListener('done', () => {
+    es.close();
+    onDone();
+  });
+  es.addEventListener('error', (e: MessageEvent) => {
+    es.close();
+    onError(e.data as string || 'Stream error');
+  });
+
+  return es;
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import generateImage, { sendMessageToBackend } from "@/lib/api";
+import generateImage, { streamChat } from "@/lib/api";
 import React, { ReactElement } from "react";
 
 export default function Home() {
@@ -81,28 +81,7 @@ export default function Home() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Typing simulation
-  const simulateTyping = async (text: string) => {
-    const speed = 30;
-    for (let i = 0; i <= text.length; i++) {
-      const slice = text.slice(0, i);
-      setMessages((prev) => {
-        const base = prev.slice(0, -1);
-        return [
-          ...base,
-          <div
-            key={prev.length}
-            className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-          >
-            🤖: {slice}
-          </div>,
-        ];
-      });
-      await new Promise((r) => setTimeout(r, speed));
-    }
-  };
-
-  // Handle text send
+  // Handle text send with streaming
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     setLoading(true);
@@ -118,19 +97,11 @@ export default function Home() {
       </div>,
     ]);
 
-    // placeholder bot bubble
-    setMessages((prev) => [
-      ...prev,
-      <div key={prev.length} className="self-start italic text-gray-500">
-        🤖 is typing...
-      </div>,
-    ]);
-
     // image vs chat
-    if (/\b(generate|draw|imagine|picture|render|image)\b/i.test(input)) {
+    if (/(generate|draw|imagine|picture|render|image)/i.test(input)) {
       const url = await generateImage(input, useHighQuality);
       setMessages((prev) =>
-        prev.slice(0, -1).concat(
+        prev.slice(0, -0).concat(
           url ? (
             <div key={prev.length} className="self-start space-y-2">
               <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
@@ -154,22 +125,61 @@ export default function Home() {
           )
         )
       );
+      setLoading(false);
     } else {
-      const resp = await sendMessageToBackend(input);
-      await simulateTyping(resp);
+      // add initial empty bot bubble for streaming
+      setMessages((prev) => [
+        ...prev,
+        <div
+          key={prev.length}
+          className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+        >
+          🤖: 
+        </div>,
+      ]);
+
+      // start streaming chat
+      streamChat(
+        input,
+        (chunk) => {
+          setMessages((prev) => {
+            const newMsgs = [...prev];
+            const idx = newMsgs.length - 1;
+            newMsgs[idx] = (
+              <div
+                key={idx}
+                className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+              >
+                🤖: {chunk}
+              </div>
+            );
+            return newMsgs;
+          });
+        },
+        () => {
+          setLoading(false);
+        },
+        (err) => {
+          setLoading(false);
+          setMessages((prev) => [
+            ...prev,
+            <div key={prev.length} className="self-start text-red-500">
+              Error: {err}
+            </div>,
+          ]);
+        }
+      );
     }
 
     setInput("");
-    setLoading(false);
   };
 
   // Handle file upload
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || loading) return;
     setLoading(true);
 
-    // upload to Cloudinary
     const form = new FormData();
     form.append("file", file);
     form.append("upload_preset", "YOUR_UPLOAD_PRESET");
@@ -179,7 +189,6 @@ export default function Home() {
     );
     const { secure_url } = await res.json();
 
-    // add to chat
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="self-end space-y-1">
