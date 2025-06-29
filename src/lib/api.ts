@@ -80,7 +80,7 @@ export async function generateImage(
 
 /**
  * Stream chat responses token-by-token in real time.
- * Calls onDelta() for each new text chunk, onDone() when complete, onError() on failure.
+ * Calls onDelta() for each new text chunk, onDone() when complete, onError() on true failures.
  */
 export function streamChat(
   message: string,
@@ -90,20 +90,27 @@ export function streamChat(
 ): EventSource {
   const user_id = getUserId();
   const params = new URLSearchParams({ user_id, message });
-  const url = `https://daydreamforge.onrender.com/chat/stream?${params}`;
+  const url = `https://daydreamforge.onrender.com/chat/stream?${params.toString()}`;
   const es = new EventSource(url);
 
+  // Token events
   es.onmessage = (e) => {
     if (e.data) onDelta(e.data);
   };
+
+  // Custom 'done' event signals end of stream
   es.addEventListener('done', () => {
     es.close();
     onDone();
   });
-  es.addEventListener('error', (e: MessageEvent) => {
-    es.close();
-    onError(e.data as string || 'Stream error');
-  });
+
+  // Only treat actual network/CORS issues as errors
+  es.onerror = () => {
+    if (es.readyState !== EventSource.CLOSED) {
+      onError('Network or CORS error');
+      es.close();
+    }
+  };
 
   return es;
 }
