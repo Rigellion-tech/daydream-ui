@@ -37,9 +37,7 @@ export default function Home() {
         const restored = data.messages.map((msg: string, i: number) => (
           <div
             key={i}
-            className={`self-${
-              msg.startsWith("🧑") ? "end" : "start"
-            } p-2 rounded-lg max-w-[80%] ${
+            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${
               msg.startsWith("🧑")
                 ? "bg-blue-100 dark:bg-blue-800"
                 : "bg-gray-200 dark:bg-gray-700"
@@ -75,18 +73,18 @@ export default function Home() {
     })().catch(console.error);
   }, [messages, user_id]);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom
   useEffect(() => {
     const el = messageListRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Handle text send with streaming
-  const handleSend = async () => {
+  // Handle sending messages
+  const handleSend = () => {
     if (!input.trim() || loading) return;
     setLoading(true);
 
-    // add user bubble
+    // Add user bubble
     setMessages((prev) => [
       ...prev,
       <div
@@ -97,37 +95,27 @@ export default function Home() {
       </div>,
     ]);
 
-    // image vs chat
+    // Generate image if prompt indicates
     if (/(generate|draw|imagine|picture|render|image)/i.test(input)) {
-      const url = await generateImage(input, useHighQuality);
-      setMessages((prev) =>
-        prev.slice(0, prev.length).concat(
-          url ? (
-            <div key={prev.length} className="self-start space-y-2">
-              <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-                ✅ Here&apos;s your dream image:
-              </p>
-              <Image
-                src={url}
-                alt="AI Generated"
-                width={512}
-                height={512}
-                className="rounded-lg border border-gray-300 dark:border-gray-700"
-              />
-            </div>
-          ) : (
-            <div
-              key={prev.length}
-              className="self-start bg-red-200 dark:bg-red-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-            >
-              🤖: ❌ Image generation failed.
-            </div>
-          )
-        )
-      );
-      setLoading(false);
+      generateImage(input, useHighQuality).then((url) => {
+        setMessages((prev) => [
+          ...prev,
+          <div key={prev.length} className="self-start space-y-2">
+            <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+              ✅ Here&apos;s your dream image:
+            </p>
+            <Image
+              src={url}
+              alt="AI Generated"
+              width={512}
+              height={512}
+              className="rounded-lg border border-gray-300 dark:border-gray-700"
+            />
+          </div>,
+        ]);
+      }).finally(() => setLoading(false));
     } else {
-      // add initial empty bot bubble for streaming
+      // Add initial empty bot bubble
       setMessages((prev) => [
         ...prev,
         <div
@@ -138,27 +126,27 @@ export default function Home() {
         </div>,
       ]);
 
-      // start streaming chat
+      // Stream chat tokens
+      let accumulated = "";
       streamChat(
         input,
-        (chunk) => {
+        (delta) => {
+          accumulated += delta;
           setMessages((prev) => {
-            const newMsgs = [...prev];
-            const idx = newMsgs.length - 1;
-            newMsgs[idx] = (
+            const msgs = [...prev];
+            const idx = msgs.length - 1;
+            msgs[idx] = (
               <div
                 key={idx}
                 className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
               >
-                🤖: {chunk}
+                🤖: {accumulated}
               </div>
             );
-            return newMsgs;
+            return msgs;
           });
         },
-        () => {
-          setLoading(false);
-        },
+        () => setLoading(false),
         (err) => {
           setLoading(false);
           setMessages((prev) => [
@@ -174,12 +162,11 @@ export default function Home() {
     setInput("");
   };
 
-  // Handle file upload
+  // Handle file uploads
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || loading) return;
     setLoading(true);
-
     const form = new FormData();
     form.append("file", file);
     form.append("upload_preset", "YOUR_UPLOAD_PRESET");
@@ -204,7 +191,6 @@ export default function Home() {
         />
       </div>,
     ]);
-
     e.target.value = "";
     setLoading(false);
   };
@@ -224,25 +210,16 @@ export default function Home() {
       <h1 className="text-3xl sm:text-4xl font-bold mb-8 flex items-center gap-2">
         <span>💬</span> DayDream AI Assistant
       </h1>
-
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
-          <button
-            onClick={handleClear}
-            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-          >
+          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
             Clear Chat 🗑️
           </button>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={useHighQuality}
-              onChange={() => setUseHighQuality((v) => !v)}
-            />
+            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} />
             High Quality (Segmind)
           </label>
         </div>
-
         <div
           ref={messageListRef}
           className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900"
@@ -252,7 +229,6 @@ export default function Home() {
             <div key={i}>{msg}</div>
           ))}
         </div>
-
         <div className="flex gap-2 items-center">
           <input
             type="text"
@@ -266,9 +242,7 @@ export default function Home() {
           <button
             onClick={handleSend}
             disabled={loading}
-            className={`px-4 py-2 rounded text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`px-4 py-2 rounded text-white ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
           >
             {loading ? "Sending…" : "Send"}
           </button>
@@ -279,14 +253,7 @@ export default function Home() {
           >
             📎
           </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFile}
-            className="hidden"
-            accept="image/*"
-            disabled={loading}
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFile} className="hidden" accept="image/*" disabled={loading} />
         </div>
       </div>
     </div>
