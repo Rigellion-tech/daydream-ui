@@ -177,6 +177,7 @@ export default function Home() {
     );
     const { secure_url } = await res.json();
 
+    // user image bubble
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="self-end space-y-1">
@@ -192,8 +193,44 @@ export default function Home() {
         />
       </div>,
     ]);
+
+    // start streaming a description request
+    // initial empty bot bubble
+    setMessages((prev) => [
+      ...prev,
+      <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+        🤖:
+      </div>,
+    ]);
+    let accumulatedDesc = "";
+    streamChat(
+      `Describe this image: ${secure_url}`,
+      (delta) => {
+        accumulatedDesc += delta;
+        setMessages((prev) => {
+          const msgs = [...prev];
+          const idx = msgs.length - 1;
+          msgs[idx] = (
+            <div key={idx} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+              🤖: {accumulatedDesc}
+            </div>
+          );
+          return msgs;
+        });
+      },
+      () => setLoading(false),
+      (err) => {
+        setLoading(false);
+        setMessages((prev) => [
+          ...prev,
+          <div key={prev.length} className="self-start text-red-500">
+            Error: {err}
+          </div>,
+        ]);
+      }
+    );
+
     e.target.value = "";
-    setLoading(false);
   };
 
   // Clear chat
