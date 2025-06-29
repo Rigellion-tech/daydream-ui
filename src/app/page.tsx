@@ -16,9 +16,11 @@ export default function Home() {
 
   const user_id = useRef(
     typeof window !== "undefined"
-      ? localStorage.getItem("user_id") ||
+      ?
+        localStorage.getItem("user_id") ||
         `user-${Math.random().toString(36).substring(2, 10)}`
-      : "user-temp"
+      :
+        "user-temp"
   ).current;
 
   // Persist user_id
@@ -95,9 +97,11 @@ export default function Home() {
       </div>,
     ]);
 
-    // Determine if it's an image request
-    if (/(generate|draw|imagine|picture|render|image)/i.test(input)) {
-      const url = await generateImage(input, useHighQuality);
+    // Determine if it's an explicit image request
+    const trimmed = input.trim();
+    if (trimmed.toLowerCase().startsWith('/image ')) {
+      const prompt = trimmed.slice(7).trim();
+      const url = await generateImage(prompt, useHighQuality);
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="self-start space-y-2">
@@ -129,7 +133,7 @@ export default function Home() {
       // Stream chat tokens with accumulation
       let accumulated = "";
       streamChat(
-        input,
+        trimmed,
         (delta) => {
           accumulated += delta;
           setMessages((prev) => {
@@ -177,7 +181,7 @@ export default function Home() {
     );
     const { secure_url } = await res.json();
 
-    // user image bubble
+    // User image bubble
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="self-end space-y-1">
@@ -194,8 +198,7 @@ export default function Home() {
       </div>,
     ]);
 
-    // start streaming a description request
-    // initial empty bot bubble
+    // Start streaming a description request
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
@@ -250,64 +253,21 @@ export default function Home() {
       </h1>
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
-          <button
-            onClick={handleClear}
-            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-          >
-            Clear Chat 🗑️
-          </button>
+          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Clear Chat 🗑️</button>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={useHighQuality}
-              onChange={() => setUseHighQuality((v) => !v)}
-            />
-            High Quality (Segmind)
+            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} /> High Quality (Segmind)
           </label>
         </div>
-        <div
-          ref={messageListRef}
-          className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900"
-          aria-live="polite"
-        >
+        <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900" aria-live="polite">
           {messages.map((msg, i) => (
             <div key={i}>{msg}</div>
           ))}
         </div>
         <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800"
-            placeholder="Ask something..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={loading}
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            className={`px-4 py-2 rounded text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {loading ? "Sending…" : "Send"}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={loading}
-            className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
-          >
-            📎
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFile}
-            className="hidden"
-            accept="image/*"
-            disabled={loading}
-          />
+          <input type="text" className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800" placeholder="Ask something..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} disabled={loading} />
+          <button onClick={handleSend} disabled={loading} className={`px-4 py-2 rounded text-white ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>{loading ? "Sending…" : "Send"}</button>
+          <button onClick={() => fileInputRef.current?.click()} disabled={loading} className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600">📎</button>
+          <input type="file" ref={fileInputRef} onChange={handleFile} className="hidden" accept="image/*" disabled={loading} />
         </div>
       </div>
     </div>
