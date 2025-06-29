@@ -79,6 +79,34 @@ export async function generateImage(
 }
 
 /**
+ * Ask the model whether this user message is an image request.
+ * Returns true if GPT responds 'yes'.
+ */
+export async function isImageRequest(
+  message: string
+): Promise<boolean> {
+  const user_id = getUserId();
+  const classifierPrompt = `You are a classifier. Answer ONLY 'yes' or 'no'.\n` +
+    `Is the following user message asking to generate an image?\n"${message}"\nAnswer:`;
+  try {
+    const res = await fetch(
+      'https://daydreamforge.onrender.com/chat',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: classifierPrompt, user_id }),
+      }
+    );
+    const data = (await res.json()) as ChatResponse;
+    const answer = data.response?.trim() ?? '';
+    return /^yes/i.test(answer);
+  } catch (err) {
+    console.error('isImageRequest failed:', err);
+    return false;
+  }
+}
+
+/**
  * Stream chat responses token-by-token in real time.
  * Calls onDelta() for each new text chunk, onDone() when complete, onError() on true failures.
  */

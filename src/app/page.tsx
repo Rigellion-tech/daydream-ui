@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { generateImage, streamChat } from "@/lib/api";
+import { generateImage, streamChat, isImageRequest } from "@/lib/api";
 import React, { ReactElement } from "react";
 
 export default function Home() {
@@ -16,11 +16,9 @@ export default function Home() {
 
   const user_id = useRef(
     typeof window !== "undefined"
-      ?
-        localStorage.getItem("user_id") ||
+      ? localStorage.getItem("user_id") ||
         `user-${Math.random().toString(36).substring(2, 10)}`
-      :
-        "user-temp"
+      : "user-temp"
   ).current;
 
   // Persist user_id
@@ -97,11 +95,11 @@ export default function Home() {
       </div>,
     ]);
 
-    // Determine if it's an explicit image request
-    const trimmed = input.trim();
-    if (trimmed.toLowerCase().startsWith('/image ')) {
-      const prompt = trimmed.slice(7).trim();
-      const url = await generateImage(prompt, useHighQuality);
+    // Determine if it's an image request via model
+    const wantsImage = await isImageRequest(input);
+    if (wantsImage) {
+      const promptText = input.trim().replace(/^\/image\s+/i, "");
+      const url = await generateImage(promptText, useHighQuality);
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="self-start space-y-2">
@@ -133,7 +131,7 @@ export default function Home() {
       // Stream chat tokens with accumulation
       let accumulated = "";
       streamChat(
-        trimmed,
+        input,
         (delta) => {
           accumulated += delta;
           setMessages((prev) => {
@@ -255,13 +253,12 @@ export default function Home() {
         <div className="flex justify-between items-center">
           <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Clear Chat 🗑️</button>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} /> High Quality (Segmind)
+            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} />
+            High Quality (Segmind)
           </label>
         </div>
         <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900" aria-live="polite">
-          {messages.map((msg, i) => (
-            <div key={i}>{msg}</div>
-          ))}
+          {messages.map((msg, i) => <div key={i}>{msg}</div>)}
         </div>
         <div className="flex gap-2 items-center">
           <input type="text" className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800" placeholder="Ask something..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} disabled={loading} />
