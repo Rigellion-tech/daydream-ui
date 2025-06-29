@@ -80,7 +80,7 @@ export default function Home() {
   }, [messages]);
 
   // Handle sending messages
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || loading) return;
     setLoading(true);
 
@@ -95,25 +95,25 @@ export default function Home() {
       </div>,
     ]);
 
-    // Generate image if prompt indicates
+    // Determine if it's an image request
     if (/(generate|draw|imagine|picture|render|image)/i.test(input)) {
-      generateImage(input, useHighQuality).then((url) => {
-        setMessages((prev) => [
-          ...prev,
-          <div key={prev.length} className="self-start space-y-2">
-            <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              ✅ Here&apos;s your dream image:
-            </p>
-            <Image
-              src={url}
-              alt="AI Generated"
-              width={512}
-              height={512}
-              className="rounded-lg border border-gray-300 dark:border-gray-700"
-            />
-          </div>,
-        ]);
-      }).finally(() => setLoading(false));
+      const url = await generateImage(input, useHighQuality);
+      setMessages((prev) => [
+        ...prev,
+        <div key={prev.length} className="self-start space-y-2">
+          <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            ✅ Here&apos;s your dream image:
+          </p>
+          <Image
+            src={url}
+            alt="AI Generated"
+            width={512}
+            height={512}
+            className="rounded-lg border border-gray-300 dark:border-gray-700"
+          />
+        </div>,
+      ]);
+      setLoading(false);
     } else {
       // Add initial empty bot bubble
       setMessages((prev) => [
@@ -126,7 +126,7 @@ export default function Home() {
         </div>,
       ]);
 
-      // Stream chat tokens
+      // Stream chat tokens with accumulation
       let accumulated = "";
       streamChat(
         input,
@@ -167,11 +167,12 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file || loading) return;
     setLoading(true);
+
     const form = new FormData();
     form.append("file", file);
-    form.append("upload_preset", "YOUR_UPLOAD_PRESET");
+    form.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "YOUR_UPLOAD_PRESET");
     const res = await fetch(
-      "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload",
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
       { method: "POST", body: form }
     );
     const { secure_url } = await res.json();
@@ -212,11 +213,18 @@ export default function Home() {
       </h1>
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
-          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+          <button
+            onClick={handleClear}
+            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+          >
             Clear Chat 🗑️
           </button>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} />
+            <input
+              type="checkbox"
+              checked={useHighQuality}
+              onChange={() => setUseHighQuality((v) => !v)}
+            />
             High Quality (Segmind)
           </label>
         </div>
@@ -242,7 +250,9 @@ export default function Home() {
           <button
             onClick={handleSend}
             disabled={loading}
-            className={`px-4 py-2 rounded text-white ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`px-4 py-2 rounded text-white ${
+              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
             {loading ? "Sending…" : "Send"}
           </button>
@@ -253,7 +263,14 @@ export default function Home() {
           >
             📎
           </button>
-          <input type="file" ref={fileInputRef} onChange={handleFile} className="hidden" accept="image/*" disabled={loading} />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFile}
+            className="hidden"
+            accept="image/*"
+            disabled={loading}
+          />
         </div>
       </div>
     </div>
