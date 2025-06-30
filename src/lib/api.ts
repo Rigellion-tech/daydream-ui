@@ -1,6 +1,11 @@
 // src/lib/api.ts
 
-// --- Typed interfaces for API responses ---
+// --- Typed interfaces for API requests & responses ---
+interface ChatRequest {
+  user_id: string;
+  message?: string;
+  image_url?: string;
+}
 interface ChatResponse {
   response?: string;
   error?: string;
@@ -22,19 +27,24 @@ function getUserId(): string {
 }
 
 /**
- * Send a single chat message to the backend and return the full reply.
+ * Send a single chat message (and optional image) to the backend and return the full reply.
  */
 export async function sendMessageToBackend(
-  message: string
+  message: string,
+  imageUrl?: string
 ): Promise<string> {
   const user_id = getUserId();
+  const payload: ChatRequest = { user_id };
+  if (message) payload.message = message;
+  if (imageUrl) payload.image_url = imageUrl;
+
   try {
     const res = await fetch(
       'https://daydreamforge.onrender.com/chat',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, user_id }),
+        body: JSON.stringify(payload),
       }
     );
     const data = (await res.json()) as ChatResponse;
@@ -112,12 +122,14 @@ export async function isImageRequest(
  */
 export function streamChat(
   message: string,
+  imageUrl: string | undefined,
   onDelta: (chunk: string) => void,
   onDone: () => void,
   onError: (err: string) => void
 ): EventSource {
   const user_id = getUserId();
   const params = new URLSearchParams({ user_id, message });
+  if (imageUrl) params.append('image_url', imageUrl);
   const url = `https://daydreamforge.onrender.com/chat/stream?${params.toString()}`;
   const es = new EventSource(url);
 
