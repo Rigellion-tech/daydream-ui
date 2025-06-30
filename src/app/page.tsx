@@ -10,6 +10,7 @@ export default function Home() {
   const [messages, setMessages] = useState<(string | ReactElement)[]>([]);
   const [useHighQuality, setUseHighQuality] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -58,8 +59,7 @@ export default function Home() {
       const plain = messages.map((msg) => {
         if (typeof msg === "string") return msg;
         if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement<{ children: React.ReactNode }>).props
-            .children;
+          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
           if (Array.isArray(children)) return children[1] || "";
           return typeof children === "string" ? children : "";
         }
@@ -81,7 +81,7 @@ export default function Home() {
 
   // Handle sending messages
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && !currentImageUrl) || loading) return;
     setLoading(true);
 
     // Add user bubble
@@ -132,6 +132,7 @@ export default function Home() {
       let accumulated = "";
       streamChat(
         input,
+        undefined,
         (delta) => {
           accumulated += delta;
           setMessages((prev) => {
@@ -162,6 +163,7 @@ export default function Home() {
     }
 
     setInput("");
+    setCurrentImageUrl(undefined);
   };
 
   // Handle file uploads
@@ -178,6 +180,7 @@ export default function Home() {
       { method: "POST", body: form }
     );
     const { secure_url } = await res.json();
+    setCurrentImageUrl(secure_url);
 
     // User image bubble
     setMessages((prev) => [
@@ -196,24 +199,29 @@ export default function Home() {
       </div>,
     ]);
 
-    // Start streaming a description request
+    // Stream image description
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
         🤖:
       </div>,
     ]);
-    let accumulatedDesc = "";
+
+    let descAccum = "";
     streamChat(
       `Describe this image: ${secure_url}`,
+      secure_url,
       (delta) => {
-        accumulatedDesc += delta;
+        descAccum += delta;
         setMessages((prev) => {
           const msgs = [...prev];
           const idx = msgs.length - 1;
           msgs[idx] = (
-            <div key={idx} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-              🤖: {accumulatedDesc}
+            <div
+              key={idx}
+              className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+            >
+              🤖: {descAccum}
             </div>
           );
           return msgs;
@@ -241,7 +249,7 @@ export default function Home() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id, messages: [] }),
-    });
+    }).catch(console.error);
   };
 
   return (
@@ -251,7 +259,9 @@ export default function Home() {
       </h1>
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex justify-between items-center">
-          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Clear Chat 🗑️</button>
+          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+            Clear Chat 🗑️
+          </button>
           <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
             <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} />
             High Quality (Segmind)
@@ -261,10 +271,39 @@ export default function Home() {
           {messages.map((msg, i) => <div key={i}>{msg}</div>)}
         </div>
         <div className="flex gap-2 items-center">
-          <input type="text" className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800" placeholder="Ask something..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} disabled={loading} />
-          <button onClick={handleSend} disabled={loading} className={`px-4 py-2 rounded text-white ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>{loading ? "Sending…" : "Send"}</button>
-          <button onClick={() => fileInputRef.current?.click()} disabled={loading} className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600">📎</button>
-          <input type="file" ref={fileInputRef} onChange={handleFile} className="hidden" accept="image/*" disabled={loading} />
+          <input
+            type="text"
+            className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800"
+            placeholder="Ask something..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={loading}
+          />
+          <button
+            onClick={handleSend}
+            disabled={loading}
+            className={`px-4 py-2 rounded text-white ${
+              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {loading ? "Sending…" : "Send"}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
+          >
+            📎
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFile}
+            className="hidden"
+            accept="image/*"
+            disabled={loading}
+          />
         </div>
       </div>
     </div>
