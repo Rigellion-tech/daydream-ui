@@ -106,7 +106,7 @@ export default function Home() {
           <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
             ✅ Here&apos;s your dream image:
           </p>
-          <Image
+          <Image unoptimized
             src={url}
             alt="AI Generated"
             width={512}
@@ -189,8 +189,7 @@ export default function Home() {
         <p className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
           🧑 sent an image:
         </p>
-        <Image
-          src={secure_url}
+        <Image unoptimized src={secure_url}
           alt="User upload"
           width={256}
           height={256}
