@@ -59,7 +59,8 @@ export default function Home() {
       const plain = messages.map((msg) => {
         if (typeof msg === "string") return msg;
         if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
+          const children = (msg as ReactElement<{ children: React.ReactNode }>).props
+            .children;
           if (Array.isArray(children)) return children[1] || "";
           return typeof children === "string" ? children : "";
         }
@@ -174,69 +175,86 @@ export default function Home() {
 
     const form = new FormData();
     form.append("file", file);
-    form.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "YOUR_UPLOAD_PRESET");
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: "POST", body: form }
-    );
-    const { secure_url } = await res.json();
-    setCurrentImageUrl(secure_url);
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+    const preset    = process.env.NEXT_PUBLIC_CLOUDINARY_PRESET!;
+    const folder    = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
+    form.append("upload_preset", preset);
+    if (folder) form.append("folder", folder);
 
-    // User image bubble
-    setMessages((prev) => [
-      ...prev,
-      <div key={prev.length} className="self-end space-y-1">
-        <p className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-          🧑 sent an image:
-        </p>
-        <Image unoptimized src={secure_url}
-          alt="User upload"
-          width={256}
-          height={256}
-          className="rounded-lg border border-gray-300 dark:border-gray-700"
-        />
-      </div>,
-    ]);
-
-    // Stream image description
-    setMessages((prev) => [
-      ...prev,
-      <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-        🤖:
-      </div>,
-    ]);
-
-    let descAccum = "";
-    streamChat(
-      `Describe this image: ${secure_url}`,
-      secure_url,
-      (delta) => {
-        descAccum += delta;
-        setMessages((prev) => {
-          const msgs = [...prev];
-          const idx = msgs.length - 1;
-          msgs[idx] = (
-            <div
-              key={idx}
-              className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-            >
-              🤖: {descAccum}
-            </div>
-          );
-          return msgs;
-        });
-      },
-      () => setLoading(false),
-      (err) => {
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: form }
+      );
+      const data = await res.json();
+      if (!data.secure_url) {
+        console.error("Cloudinary upload failed:", data);
         setLoading(false);
-        setMessages((prev) => [
-          ...prev,
-          <div key={prev.length} className="self-start text-red-500">
-            Error: {err}
-          </div>,
-        ]);
+        return;
       }
-    );
+      const secure_url = data.secure_url;
+      setCurrentImageUrl(secure_url);
+
+      // User image bubble
+      setMessages((prev) => [
+        ...prev,
+        <div key={prev.length} className="self-end space-y-1">
+          <p className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            🧑 sent an image:
+          </p>
+          <Image unoptimized
+            src={secure_url}
+            alt="User upload"
+            width={256}
+            height={256}
+            className="rounded-lg border border-gray-300 dark:border-gray-700"
+          />
+        </div>,
+      ]);
+
+      // Stream image description
+      setMessages((prev) => [
+        ...prev,
+        <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          🤖:
+        </div>,
+      ]);
+
+      let descAccum = "";
+      streamChat(
+        `Describe this image: ${secure_url}`,
+        secure_url,
+        (delta) => {
+          descAccum += delta;
+          setMessages((prev) => {
+            const msgs = [...prev];
+            const idx = msgs.length - 1;
+            msgs[idx] = (
+              <div
+                key={idx}
+                className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
+              >
+                🤖: {descAccum}
+              </div>
+            );
+            return msgs;
+          });
+        },
+        () => setLoading(false),
+        (err) => {
+          setLoading(false);
+          setMessages((prev) => [
+            ...prev,
+            <div key={prev.length} className="self-start text-red-500">
+              Error: {err}
+            </div>,
+          ]);
+        }
+      );
+    } catch (error) {
+      console.error("Upload error:", error);
+      setLoading(false);
+    }
 
     e.target.value = "";
   };
