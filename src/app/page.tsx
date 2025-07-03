@@ -38,13 +38,17 @@ export default function Home() {
         const restored = data.messages.map((msg: string, i: number) => (
           <div
             key={i}
-            className={`self-${msg.startsWith("🧑") ? "end" : "start"} p-2 rounded-lg max-w-[80%] ${
-              msg.startsWith("🧑")
-                ? "bg-blue-100 dark:bg-blue-800"
-                : "bg-gray-200 dark:bg-gray-700"
-            } text-black dark:text-white`}
+            className={`w-full flex ${msg.startsWith("🧑") ? "justify-end" : "justify-start"}`}
           >
-            {msg}
+            <div
+              className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
+                msg.startsWith("🧑")
+                  ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
+                  : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+              }`}
+            >
+              {msg}
+            </div>
           </div>
         ));
         setMessages(restored);
@@ -88,11 +92,10 @@ export default function Home() {
     // Add user bubble
     setMessages((prev) => [
       ...prev,
-      <div
-        key={prev.length}
-        className="self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-      >
-        🧑: {input}
+      <div key={prev.length} className="w-full flex justify-end">
+        <div className="whitespace-pre-wrap self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          🧑: {input}
+        </div>
       </div>,
     ]);
 
@@ -103,11 +106,12 @@ export default function Home() {
       const url = await generateImage(promptText, useHighQuality);
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="self-start space-y-2">
-          <p className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+        <div key={prev.length} className="w-full flex justify-start space-y-2">
+          <div className="whitespace-pre-wrap bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
             ✅ Here&apos;s your dream image:
-          </p>
-          <Image unoptimized
+          </div>
+          <Image
+            unoptimized
             src={url}
             alt="AI Generated"
             width={512}
@@ -121,11 +125,10 @@ export default function Home() {
       // Add initial empty bot bubble
       setMessages((prev) => [
         ...prev,
-        <div
-          key={prev.length}
-          className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-        >
-          🤖:
+        <div key={prev.length} className="w-full flex justify-start">
+          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            🤖:
+          </div>
         </div>,
       ]);
 
@@ -140,11 +143,10 @@ export default function Home() {
             const msgs = [...prev];
             const idx = msgs.length - 1;
             msgs[idx] = (
-              <div
-                key={idx}
-                className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-              >
-                🤖: {accumulated}
+              <div key={idx} className="w-full flex justify-start">
+                <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+                  🤖: {accumulated}
+                </div>
               </div>
             );
             return msgs;
@@ -155,8 +157,8 @@ export default function Home() {
           setLoading(false);
           setMessages((prev) => [
             ...prev,
-            <div key={prev.length} className="self-start text-red-500">
-              Error: {err}
+            <div key={prev.length} className="w-full flex justify-start">
+              <div className="self-start text-red-500">Error: {err}</div>
             </div>,
           ]);
         }
@@ -198,11 +200,12 @@ export default function Home() {
       // User image bubble
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="self-end space-y-1">
-          <p className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+        <div key={prev.length} className="w-full flex justify-end space-y-1">
+          <div className="whitespace-pre-wrap self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
             🧑 sent an image:
-          </p>
-          <Image unoptimized
+          </div>
+          <Image
+            unoptimized
             src={secure_url}
             alt="User upload"
             width={256}
@@ -215,8 +218,10 @@ export default function Home() {
       // Stream image description
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-          🤖:
+        <div key={prev.length} className="w-full flex justify-start">
+          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            🤖:
+          </div>
         </div>,
       ]);
 
@@ -230,11 +235,10 @@ export default function Home() {
             const msgs = [...prev];
             const idx = msgs.length - 1;
             msgs[idx] = (
-              <div
-                key={idx}
-                className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]"
-              >
-                🤖: {descAccum}
+              <div key={idx} className="w-full flex justify-start">
+                <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+                  🤖: {descAccum}
+                </div>
               </div>
             );
             return msgs;
@@ -245,8 +249,8 @@ export default function Home() {
           setLoading(false);
           setMessages((prev) => [
             ...prev,
-            <div key={prev.length} className="self-start text-red-500">
-              Error: {err}
+            <div key={prev.length} className="w-full flex justify-start">
+              <div className="self-start text-red-500">Error: {err}</div>
             </div>,
           ]);
         }
@@ -274,54 +278,43 @@ export default function Home() {
       <h1 className="text-3xl sm:text-4xl font-bold mb-8 flex items-center gap-2">
         <span>💬</span> DayDream AI Assistant
       </h1>
-      <div className="w-full max-w-2xl space-y-6">
-        <div className="flex justify-between items-center">
-          <button onClick={handleClear} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
-            Clear Chat 🗑️
-          </button>
-          <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <input type="checkbox" checked={useHighQuality} onChange={() => setUseHighQuality((v) => !v)} />
-            High Quality (Segmind)
-          </label>
-        </div>
-        <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900" aria-live="polite">
-          {messages.map((msg, i) => <div key={i}>{msg}</div>)}
-        </div>
-        <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800"
-            placeholder="Ask something..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={loading}
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            className={`px-4 py-2 rounded text-white ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {loading ? "Sending…" : "Send"}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={loading}
-            className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
-          >
-            📎
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFile}
-            className="hidden"
-            accept="image/*"
-            disabled={loading}
-          />
-        </div>
+      <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900 w-full max-w-2xl" aria-live="polite">
+        {messages.map((msg, i) => <React.Fragment key={i}>{msg}</React.Fragment>)}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2 items-center w-full max-w-2xl">
+        <input
+          type="text"
+          className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800"
+          placeholder="Ask something..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          disabled={loading}
+        />
+        <button
+          onClick={handleSend}
+          disabled={loading}
+          className={`px-4 py-2 rounded text-white ${
+            loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          {loading ? "Sending…" : "Send"}
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+          className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
+        >
+          📎
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFile}
+          className="hidden"
+          accept="image/*"
+          disabled={loading}
+        />
       </div>
     </div>
   );
