@@ -275,9 +275,27 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-white dark:bg-black text-black dark:text-white">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-8 flex items-center gap-2">
+      <h1 className="text-3xl sm:text-4xl font-bold mb-4 flex items-center gap-2">
         <span>💬</span> DayDream AI Assistant
       </h1>
+      {/* Controls: Clear Chat & High Quality Toggle */}
+      <div className="flex justify-between items-center w-full max-w-2xl mb-4">
+        <button
+          onClick={handleClear}
+          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+        >
+          Clear Chat 🗑️
+        </button>
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={useHighQuality}
+            onChange={() => setUseHighQuality((v) => !v)}
+            className="h-4 w-4"
+          />
+          High Quality (Segmind)
+        </label>
+      </div>
       <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900 w-full max-w-2xl" aria-live="polite">
         {messages.map((msg, i) => <React.Fragment key={i}>{msg}</React.Fragment>)}
       </div>
