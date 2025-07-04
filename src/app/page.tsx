@@ -130,10 +130,10 @@ export default function Home() {
             {(accumulated /* accumulated on 131, descAccum on 230 */)
             .split(/\n\n+/)
             .map((para, i) => (
-      <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
-    ))
-  }
-</div>
+            <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
+            ))
+            }
+          </div>
 
         </div>,
       ]);
