@@ -126,9 +126,15 @@ export default function Home() {
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
-          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            🤖:
-          </div>
+          <div className="mt-2">
+            {(accumulated /* accumulated on 131, descAccum on 230 */)
+            .split(/\n\n+/)
+            .map((para, i) => (
+      <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
+    ))
+  }
+</div>
+
         </div>,
       ]);
 
@@ -219,9 +225,15 @@ export default function Home() {
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
-          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            🤖:
+          <div className="mt-2">
+            {(descAccum /* accumulated on 131, descAccum on 230 */)
+              .split(/\n\n+/)
+              .map((para, i) => (
+                <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
+              ))
+            }
           </div>
+
         </div>,
       ]);
 
