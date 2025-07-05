@@ -99,7 +99,6 @@ export default function Home() {
       </div>,
     ]);
 
-    // Determine if it's an image request via model
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
@@ -126,19 +125,13 @@ export default function Home() {
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
-          <div className="mt-2">
-            {(accumulated /* accumulated on 131, descAccum on 230 */)
-            .split(/\n\n+/)
-            .map((para, i) => (
-            <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
-            ))
-            }
+          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            <span>🤖:</span>
           </div>
-
         </div>,
       ]);
 
-      // Stream chat tokens with accumulation
+      // Stream chat tokens with paragraphs
       let accumulated = "";
       streamChat(
         input,
@@ -151,7 +144,17 @@ export default function Home() {
             msgs[idx] = (
               <div key={idx} className="w-full flex justify-start">
                 <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-                  🤖: {accumulated}
+                  <span>🤖:</span>
+                  <div className="mt-2">
+                    {accumulated
+                      .split(/\n\s*\n/)
+                      .filter((para) => para.trim() !== "")
+                      .map((para, pi) => (
+                        <p key={pi} className="mb-2 whitespace-pre-wrap">
+                          {para}
+                        </p>
+                      ))}
+                  </div>
                 </div>
               </div>
             );
@@ -184,8 +187,8 @@ export default function Home() {
     const form = new FormData();
     form.append("file", file);
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-    const preset    = process.env.NEXT_PUBLIC_CLOUDINARY_PRESET!;
-    const folder    = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
+    const preset = process.env.NEXT_PUBLIC_CLOUDINARY_PRESET!;
+    const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
     form.append("upload_preset", preset);
     if (folder) form.append("folder", folder);
 
@@ -221,19 +224,13 @@ export default function Home() {
         </div>,
       ]);
 
-      // Stream image description
+      // Add initial empty bot bubble
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
-          <div className="mt-2">
-            {(descAccum /* accumulated on 131, descAccum on 230 */)
-              .split(/\n\n+/)
-              .map((para, i) => (
-                <p key={i} className="mb-2 whitespace-pre-wrap">{para}</p>
-              ))
-            }
+          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+            <span>🤖:</span>
           </div>
-
         </div>,
       ]);
 
@@ -249,7 +246,17 @@ export default function Home() {
             msgs[idx] = (
               <div key={idx} className="w-full flex justify-start">
                 <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-                  🤖: {descAccum}
+                  <span>🤖:</span>
+                  <div className="mt-2">
+                    {descAccum
+                      .split(/\n\s*\n/)
+                      .filter((para) => para.trim() !== "")
+                      .map((para, pi) => (
+                        <p key={pi} className="mb-2 whitespace-pre-wrap">
+                          {para}
+                        </p>
+                      ))}
+                  </div>
                 </div>
               </div>
             );
@@ -275,7 +282,6 @@ export default function Home() {
     e.target.value = "";
   };
 
-  // Clear chat
   const handleClear = () => {
     setMessages([]);
     fetch("https://daydreamforge.onrender.com/memory", {
@@ -290,7 +296,6 @@ export default function Home() {
       <h1 className="text-3xl sm:text-4xl font-bold mb-4 flex items-center gap-2">
         <span>💬</span> DayDream AI Assistant
       </h1>
-      {/* Controls: Clear Chat & High Quality Toggle */}
       <div className="flex justify-between items-center w-full max-w-2xl mb-4">
         <button
           onClick={handleClear}
@@ -308,8 +313,14 @@ export default function Home() {
           High Quality (Segmind)
         </label>
       </div>
-      <div ref={messageListRef} className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900 w-full max-w-2xl" aria-live="polite">
-        {messages.map((msg, i) => <React.Fragment key={i}>{msg}</React.Fragment>)}
+      <div
+        ref={messageListRef}
+        className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900 w-full max-w-2xl"
+        aria-live="polite"
+      >
+        {messages.map((msg, i) => (
+          <React.Fragment key={i}>{msg}</React.Fragment>
+        ))}
       </div>
       <div className="flex flex-col sm:flex-row gap-2 items-center w-full max-w-2xl">
         <input
