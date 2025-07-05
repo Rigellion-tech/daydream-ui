@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { generateImage, streamChat, isImageRequest } from "@/lib/api";
 import React, { ReactElement } from "react";
+import ReactMarkdown from "react-markdown";
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -22,12 +23,10 @@ export default function Home() {
       : "user-temp"
   ).current;
 
-  // Persist user_id
   useEffect(() => {
     localStorage.setItem("user_id", user_id);
   }, [user_id]);
 
-  // Fetch saved memory
   useEffect(() => {
     (async () => {
       const res = await fetch(
@@ -56,7 +55,6 @@ export default function Home() {
     })();
   }, [user_id]);
 
-  // Save memory on change
   useEffect(() => {
     if (!messages.length) return;
     (async () => {
@@ -78,18 +76,15 @@ export default function Home() {
     })().catch(console.error);
   }, [messages, user_id]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     const el = messageListRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Handle sending messages
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;
     setLoading(true);
 
-    // Add user bubble
     setMessages((prev) => [
       ...prev,
       <div key={prev.length} className="w-full flex justify-end">
@@ -121,7 +116,6 @@ export default function Home() {
       ]);
       setLoading(false);
     } else {
-      // Add initial empty bot bubble
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
@@ -131,7 +125,6 @@ export default function Home() {
         </div>,
       ]);
 
-      // Stream chat tokens with paragraphs
       let accumulated = "";
       streamChat(
         input,
@@ -146,14 +139,9 @@ export default function Home() {
                 <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
                   <span>🤖:</span>
                   <div className="mt-2">
-                    {accumulated
-                      .split(/\n\s*\n/)
-                      .filter((para) => para.trim() !== "")
-                      .map((para, pi) => (
-                        <p key={pi} className="mb-2 whitespace-pre-wrap">
-                          {para}
-                        </p>
-                      ))}
+                    <div className="prose dark:prose-invert">
+                      <ReactMarkdown>{accumulated}</ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -178,7 +166,6 @@ export default function Home() {
     setCurrentImageUrl(undefined);
   };
 
-  // Handle file uploads
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || loading) return;
@@ -206,7 +193,6 @@ export default function Home() {
       const secure_url = data.secure_url;
       setCurrentImageUrl(secure_url);
 
-      // User image bubble
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-end space-y-1">
@@ -224,7 +210,6 @@ export default function Home() {
         </div>,
       ]);
 
-      // Add initial empty bot bubble
       setMessages((prev) => [
         ...prev,
         <div key={prev.length} className="w-full flex justify-start">
@@ -248,14 +233,9 @@ export default function Home() {
                 <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
                   <span>🤖:</span>
                   <div className="mt-2">
-                    {descAccum
-                      .split(/\n\s*\n/)
-                      .filter((para) => para.trim() !== "")
-                      .map((para, pi) => (
-                        <p key={pi} className="mb-2 whitespace-pre-wrap">
-                          {para}
-                        </p>
-                      ))}
+                    <div className="prose dark:prose-invert">
+                      <ReactMarkdown>{descAccum}</ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               </div>
