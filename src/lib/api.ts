@@ -12,10 +12,12 @@ interface ChatRequest {
   image_url?: string;
   messages?: ChatMessage[];
 }
+
 interface ChatResponse {
   response?: string;
   error?: string;
 }
+
 interface ImageResponse {
   imageUrl?: string;
   error?: string;
@@ -23,11 +25,11 @@ interface ImageResponse {
 
 // --- Helper to manage or generate a persistent user ID ---
 export function getUserId(): string {
-  if (typeof window === 'undefined') return 'user-temp';
-  let id = localStorage.getItem('user_id');
+  if (typeof window === "undefined") return "user-temp";
+  let id = localStorage.getItem("user_id");
   if (!id) {
     id = `user-${Math.random().toString(36).substring(2, 10)}`;
-    localStorage.setItem('user_id', id);
+    localStorage.setItem("user_id", id);
   }
   return id;
 }
@@ -46,22 +48,22 @@ export async function sendMessageToBackend(
 
   try {
     const res = await fetch(
-      'https://daydreamforge.onrender.com/chat',
+      "https://daydreamforge.onrender.com/chat",
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }
     );
     const data = (await res.json()) as ChatResponse;
     if (!res.ok || data.error) {
       console.error(`Chat API error: ${data.error || res.status}`);
-      return data.error ?? '';
+      return data.error ?? "";
     }
-    return data.response ?? '';
+    return data.response ?? "";
   } catch (err) {
-    console.error('sendMessageToBackend failed:', err);
-    return '';
+    console.error("sendMessageToBackend failed:", err);
+    return "";
   }
 }
 
@@ -75,48 +77,51 @@ export async function generateImage(
   const user_id = getUserId();
   try {
     const res = await fetch(
-      'https://daydreamforge.onrender.com/image',
+      "https://daydreamforge.onrender.com/image",
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, useHighQuality: highQuality, user_id }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          useHighQuality: highQuality,
+          user_id,
+        }),
       }
     );
     const data = (await res.json()) as ImageResponse;
     if (!res.ok || data.error || !data.imageUrl) {
       console.error(`Image API error: ${data.error || res.status}`);
-      return '';
+      return "";
     }
     return data.imageUrl;
   } catch (err) {
-    console.error('generateImage failed:', err);
-    return '';
+    console.error("generateImage failed:", err);
+    return "";
   }
 }
 
 /**
  * Ask the model whether this user message is an image request.
  */
-export async function isImageRequest(
-  message: string
-): Promise<boolean> {
+export async function isImageRequest(message: string): Promise<boolean> {
   const user_id = getUserId();
-  const classifierPrompt = `You are a classifier. Answer ONLY 'yes' or 'no'.\n` +
+  const classifierPrompt =
+    `You are a classifier. Answer ONLY 'yes' or 'no'.\n` +
     `Is the following user message asking to generate an image?\n"${message}"\nAnswer:`;
   try {
     const res = await fetch(
-      'https://daydreamforge.onrender.com/chat',
+      "https://daydreamforge.onrender.com/chat",
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: classifierPrompt, user_id }),
       }
     );
     const data = (await res.json()) as ChatResponse;
-    const answer = data.response?.trim() ?? '';
+    const answer = data.response?.trim() ?? "";
     return /^yes/i.test(answer);
   } catch (err) {
-    console.error('isImageRequest failed:', err);
+    console.error("isImageRequest failed:", err);
     return false;
   }
 }
@@ -138,7 +143,7 @@ export function streamChat(
 
   const es = new EventSourcePolyfill(url, {
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     payload: JSON.stringify({
       user_id,
@@ -152,14 +157,14 @@ export function streamChat(
     if (e.data) onDelta(e.data);
   };
 
-  es.addEventListener('done', () => {
+  es.addEventListener("done", () => {
     es.close();
     onDone();
   });
 
   es.onerror = () => {
     if (es.readyState !== EventSource.CLOSED) {
-      onError('Network or CORS error');
+      onError("Network or CORS error");
       es.close();
     }
   };
@@ -185,7 +190,6 @@ export class EventSourcePolyfill {
     }
   ) {
     this.controller = new AbortController();
-
     this.init(url, opts);
   }
 
@@ -219,13 +223,15 @@ export class EventSourcePolyfill {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        let parts = buffer.split("\n\n");
+        const parts = buffer.split("\n\n");
         buffer = parts.pop() || "";
         for (const part of parts) {
           const line = part.trim();
           if (line.startsWith("data:")) {
             const data = line.slice("data:".length).trim();
-            this.onMessageHandler?.(new MessageEvent("message", { data }));
+            this.onMessageHandler?.(
+              new MessageEvent("message", { data })
+            );
           } else if (line.startsWith("event: done")) {
             this.onDoneHandler?.();
           }
@@ -233,6 +239,7 @@ export class EventSourcePolyfill {
       }
       this.onDoneHandler?.();
     } catch (e) {
+      console.error(e);
       this.onErrorHandler?.();
     }
   }

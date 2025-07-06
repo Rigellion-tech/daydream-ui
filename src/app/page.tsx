@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { generateImage, streamChat, isImageRequest } from "@/lib/api";
+import { generateImage, streamChat, isImageRequest, ChatMessage } from "@/lib/api";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -33,42 +28,7 @@ export default function Home() {
     localStorage.setItem("user_id", user_id);
   }, [user_id]);
 
-  // Load saved memory
-  useEffect(() => {
-    (async () => {
-      const res = await fetch(
-        `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
-      );
-      const data = await res.json();
-      if (data.messages) {
-        const raw: ChatMessage[] = data.messages;
-        const restored = raw.map((msg, i) =>
-          renderMessage(msg, i)
-        );
-        setMessages(restored);
-        setRawMessages(raw);
-      }
-    })();
-  }, [user_id]);
-
-  // Save memory whenever messages change
-  useEffect(() => {
-    if (!rawMessages.length) return;
-    (async () => {
-      await fetch("https://daydreamforge.onrender.com/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, messages: rawMessages }),
-      });
-    })().catch(console.error);
-  }, [rawMessages, user_id]);
-
-  useEffect(() => {
-    const el = messageListRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
-
-  function renderMessage(msg: ChatMessage, key: number) {
+  const renderMessage = useCallback((msg: ChatMessage, key: number) => {
     return (
       <div
         key={key}
@@ -91,7 +51,38 @@ export default function Home() {
         </div>
       </div>
     );
-  }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch(
+        `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
+      );
+      const data = await res.json();
+      if (data.messages) {
+        const raw: ChatMessage[] = data.messages;
+        const restored = raw.map((msg, i) => renderMessage(msg, i));
+        setMessages(restored);
+        setRawMessages(raw);
+      }
+    })();
+  }, [user_id, renderMessage]);
+
+  useEffect(() => {
+    if (!rawMessages.length) return;
+    (async () => {
+      await fetch("https://daydreamforge.onrender.com/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, messages: rawMessages }),
+      });
+    })().catch(console.error);
+  }, [rawMessages, user_id]);
+
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   function forceParagraphs(text: string) {
     return text.replace(/([.?!])(\s+)/g, "$1\n\n");
@@ -105,7 +96,6 @@ export default function Home() {
     setRawMessages((prev) => [...prev, userMsg]);
     setMessages((prev) => [...prev, renderMessage(userMsg, prev.length)]);
 
-    // Prepare conversation history for backend
     const chatPayload: ChatMessage[] = [
       {
         role: "system",
@@ -142,10 +132,7 @@ export default function Home() {
     } else {
       const assistantMsg: ChatMessage = { role: "assistant", content: "" };
       setRawMessages((prev) => [...prev, assistantMsg]);
-      setMessages((prev) => [
-        ...prev,
-        renderMessage(assistantMsg, prev.length),
-      ]);
+      setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
 
       let accumulated = "";
       streamChat(
@@ -153,7 +140,6 @@ export default function Home() {
         undefined,
         (delta) => {
           accumulated += delta;
-          const markdownText = forceParagraphs(accumulated);
           const newMsg: ChatMessage = {
             role: "assistant",
             content: accumulated,
@@ -240,10 +226,7 @@ export default function Home() {
 
       const assistantMsg: ChatMessage = { role: "assistant", content: "" };
       setRawMessages((prev) => [...prev, assistantMsg]);
-      setMessages((prev) => [
-        ...prev,
-        renderMessage(assistantMsg, prev.length),
-      ]);
+      setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
 
       let descAccum = "";
       const chatPayload: ChatMessage[] = [
@@ -261,7 +244,6 @@ export default function Home() {
         secure_url,
         (delta) => {
           descAccum += delta;
-          const markdownText = forceParagraphs(descAccum);
           const newMsg: ChatMessage = {
             role: "assistant",
             content: descAccum,
