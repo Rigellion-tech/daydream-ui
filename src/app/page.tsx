@@ -6,9 +6,15 @@ import { generateImage, streamChat, isImageRequest } from "@/lib/api";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export default function Home() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<(string | ReactElement)[]>([]);
+  const [messages, setMessages] = useState<ReactElement[]>([]);
+  const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
   const [useHighQuality, setUseHighQuality] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
@@ -27,6 +33,7 @@ export default function Home() {
     localStorage.setItem("user_id", user_id);
   }, [user_id]);
 
+  // Load saved memory
   useEffect(() => {
     (async () => {
       const res = await fetch(
@@ -34,142 +41,137 @@ export default function Home() {
       );
       const data = await res.json();
       if (data.messages) {
-        const restored = data.messages.map((msg: string, i: number) => (
-          <div
-            key={i}
-            className={`w-full flex ${msg.startsWith("🧑") ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
-                msg.startsWith("🧑")
-                  ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
-                  : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
-              }`}
-            >
-              {msg}
-            </div>
-          </div>
-        ));
+        const raw: ChatMessage[] = data.messages;
+        const restored = raw.map((msg, i) =>
+          renderMessage(msg, i)
+        );
         setMessages(restored);
+        setRawMessages(raw);
       }
     })();
   }, [user_id]);
 
+  // Save memory whenever messages change
   useEffect(() => {
-    if (!messages.length) return;
+    if (!rawMessages.length) return;
     (async () => {
-      const plain = messages.map((msg) => {
-        if (typeof msg === "string") return msg;
-        if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
-          if (Array.isArray(children)) return children[1] || "";
-          return typeof children === "string" ? children : "";
-        }
-        return "";
-      });
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, messages: plain }),
+        body: JSON.stringify({ user_id, messages: rawMessages }),
       });
     })().catch(console.error);
-  }, [messages, user_id]);
+  }, [rawMessages, user_id]);
 
   useEffect(() => {
     const el = messageListRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  function renderMessage(msg: ChatMessage, key: number) {
+    return (
+      <div
+        key={key}
+        className={`w-full flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
+            msg.role === "user"
+              ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
+              : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+          }`}
+        >
+          {msg.role === "assistant" ? (
+            <div className="prose dark:prose-invert">
+              <ReactMarkdown>{forceParagraphs(msg.content)}</ReactMarkdown>
+            </div>
+          ) : (
+            `🧑: ${msg.content}`
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function forceParagraphs(text: string) {
+    return text.replace(/([.?!])(\s+)/g, "$1\n\n");
+  }
+
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;
     setLoading(true);
 
-    setMessages((prev) => [
-      ...prev,
-      <div key={prev.length} className="w-full flex justify-end">
-        <div className="whitespace-pre-wrap self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-          🧑: {input}
-        </div>
-      </div>,
-    ]);
+    const userMsg: ChatMessage = { role: "user", content: input };
+    setRawMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, renderMessage(userMsg, prev.length)]);
 
-    // ---------------------------
-    // NEW: Build full conversation history
-    // ---------------------------
-    const conversationHistory = messages
-      .map((msg) => {
-        if (typeof msg === "string") return msg;
-        if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
-          if (Array.isArray(children)) return children[1] || "";
-          return typeof children === "string" ? children : "";
-        }
-        return "";
-      })
-      .filter((line) => line)
-      .join("\n");
-
-    const fullPrompt = conversationHistory
-      ? `${conversationHistory}\n🧑: ${input}`
-      : `🧑: ${input}`;
+    // Prepare conversation history for backend
+    const chatPayload: ChatMessage[] = [
+      {
+        role: "system",
+        content:
+          "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
+      },
+      ...rawMessages,
+      userMsg,
+    ];
 
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
       const url = await generateImage(promptText, useHighQuality);
+      const assistantMsg: ChatMessage = {
+        role: "assistant",
+        content: "✅ Here's your dream image:",
+      };
+      setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="w-full flex justify-start space-y-2">
-          <div className="whitespace-pre-wrap bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            ✅ Here&apos;s your dream image:
-          </div>
-          <Image
-            unoptimized
-            src={url}
-            alt="AI Generated"
-            width={512}
-            height={512}
-            className="rounded-lg border border-gray-300 dark:border-gray-700"
-          />
-        </div>,
+        renderMessage(assistantMsg, prev.length),
+        <Image
+          key={`img-${prev.length}`}
+          unoptimized
+          src={url}
+          alt="AI Generated"
+          width={512}
+          height={512}
+          className="rounded-lg border border-gray-300 dark:border-gray-700"
+        />,
       ]);
       setLoading(false);
     } else {
+      const assistantMsg: ChatMessage = { role: "assistant", content: "" };
+      setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="w-full flex justify-start">
-          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            <span>🤖:</span>
-          </div>
-        </div>,
+        renderMessage(assistantMsg, prev.length),
       ]);
 
       let accumulated = "";
       streamChat(
-        fullPrompt,
+        chatPayload,
         undefined,
         (delta) => {
           accumulated += delta;
+          const markdownText = forceParagraphs(accumulated);
+          const newMsg: ChatMessage = {
+            role: "assistant",
+            content: accumulated,
+          };
 
-          // Add forced newlines after sentences
-          const markdownText = accumulated.replace(/([.?!])(\s+)/g, "$1\n\n");
+          setRawMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = newMsg;
+            return updated;
+          });
 
           setMessages((prev) => {
-            const msgs = [...prev];
-            const idx = msgs.length - 1;
-            msgs[idx] = (
-              <div key={idx} className="w-full flex justify-start">
-                <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-                  <span>🤖:</span>
-                  <div className="mt-2">
-                    <div className="prose dark:prose-invert">
-                      <ReactMarkdown>{markdownText}</ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            const updated = [...prev];
+            updated[updated.length - 1] = renderMessage(
+              newMsg,
+              updated.length - 1
             );
-            return msgs;
+            return updated;
           });
         },
         () => setLoading(false),
@@ -216,57 +218,68 @@ export default function Home() {
       const secure_url = data.secure_url;
       setCurrentImageUrl(secure_url);
 
+      const userMsg: ChatMessage = {
+        role: "user",
+        content: `[sent image: ${secure_url}]`,
+      };
+
+      setRawMessages((prev) => [...prev, userMsg]);
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="w-full flex justify-end space-y-1">
-          <div className="whitespace-pre-wrap self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            🧑 sent an image:
-          </div>
-          <Image
-            unoptimized
-            src={secure_url}
-            alt="User upload"
-            width={256}
-            height={256}
-            className="rounded-lg border border-gray-300 dark:border-gray-700"
-          />
-        </div>,
+        renderMessage(userMsg, prev.length),
+        <Image
+          key={`upload-${prev.length}`}
+          unoptimized
+          src={secure_url}
+          alt="User upload"
+          width={256}
+          height={256}
+          className="rounded-lg border border-gray-300 dark:border-gray-700"
+        />,
       ]);
 
+      const assistantMsg: ChatMessage = { role: "assistant", content: "" };
+      setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
         ...prev,
-        <div key={prev.length} className="w-full flex justify-start">
-          <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-            <span>🤖:</span>
-          </div>
-        </div>,
+        renderMessage(assistantMsg, prev.length),
       ]);
 
       let descAccum = "";
+      const chatPayload: ChatMessage[] = [
+        {
+          role: "system",
+          content:
+            "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
+        },
+        ...rawMessages,
+        userMsg,
+      ];
+
       streamChat(
-        `Describe this image: ${secure_url}`,
+        chatPayload,
         secure_url,
         (delta) => {
           descAccum += delta;
+          const markdownText = forceParagraphs(descAccum);
+          const newMsg: ChatMessage = {
+            role: "assistant",
+            content: descAccum,
+          };
 
-          const markdownText = descAccum.replace(/([.?!])(\s+)/g, "$1\n\n");
+          setRawMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = newMsg;
+            return updated;
+          });
 
           setMessages((prev) => {
-            const msgs = [...prev];
-            const idx = msgs.length - 1;
-            msgs[idx] = (
-              <div key={idx} className="w-full flex justify-start">
-                <div className="whitespace-pre-wrap self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
-                  <span>🤖:</span>
-                  <div className="mt-2">
-                    <div className="prose dark:prose-invert">
-                      <ReactMarkdown>{markdownText}</ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            const updated = [...prev];
+            updated[updated.length - 1] = renderMessage(
+              newMsg,
+              updated.length - 1
             );
-            return msgs;
+            return updated;
           });
         },
         () => setLoading(false),
@@ -290,6 +303,7 @@ export default function Home() {
 
   const handleClear = () => {
     setMessages([]);
+    setRawMessages([]);
     fetch("https://daydreamforge.onrender.com/memory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

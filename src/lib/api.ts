@@ -1,10 +1,16 @@
 // src/lib/api.ts
 
 // --- Typed interfaces for API requests & responses ---
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
 interface ChatRequest {
   user_id: string;
   message?: string;
   image_url?: string;
+  messages?: ChatMessage[];
 }
 interface ChatResponse {
   response?: string;
@@ -16,7 +22,7 @@ interface ImageResponse {
 }
 
 // --- Helper to manage or generate a persistent user ID ---
-function getUserId(): string {
+export function getUserId(): string {
   if (typeof window === 'undefined') return 'user-temp';
   let id = localStorage.getItem('user_id');
   if (!id) {
@@ -27,7 +33,7 @@ function getUserId(): string {
 }
 
 /**
- * Send a single chat message (and optional image) to the backend and return the full reply.
+ * Send a single chat message (non-streaming) to the backend.
  */
 export async function sendMessageToBackend(
   message: string,
@@ -90,7 +96,6 @@ export async function generateImage(
 
 /**
  * Ask the model whether this user message is an image request.
- * Returns true if GPT responds 'yes'.
  */
 export async function isImageRequest(
   message: string
@@ -117,40 +122,140 @@ export async function isImageRequest(
 }
 
 /**
- * Stream chat responses token-by-token in real time.
- * Calls onDelta() for each new text chunk, onDone() when complete, onError() on true failures.
+ * Stream chat completions from the backend using structured messages.
+ * Calls onDelta for each token chunk, onDone when complete, onError on failures.
  */
 export function streamChat(
-  message: string,
+  messages: ChatMessage[],
   imageUrl: string | undefined,
   onDelta: (chunk: string) => void,
   onDone: () => void,
   onError: (err: string) => void
-): EventSource {
+): EventSourcePolyfill {
   const user_id = getUserId();
-  const params = new URLSearchParams({ user_id, message });
-  if (imageUrl) params.append('image_url', imageUrl);
-  const url = `https://daydreamforge.onrender.com/chat/stream?${params.toString()}`;
-  const es = new EventSource(url);
 
-  // Token events
+  const url = `https://daydreamforge.onrender.com/chat/stream`;
+
+  const es = new EventSourcePolyfill(url, {
+    headers: {
+      "Content-Type": "application/json"
+    },
+    payload: JSON.stringify({
+      user_id,
+      image_url: imageUrl,
+      messages,
+    }),
+    withCredentials: false,
+  });
+
   es.onmessage = (e) => {
     if (e.data) onDelta(e.data);
   };
 
-  // Custom 'done' event signals end of stream
   es.addEventListener('done', () => {
     es.close();
     onDone();
   });
 
-  // Only treat actual network/CORS issues as errors
   es.onerror = () => {
     if (es.readyState !== EventSource.CLOSED) {
       onError('Network or CORS error');
       es.close();
     }
   };
-
   return es;
+}
+
+/**
+ * Polyfill for EventSource that supports POST requests.
+ * Replaces the native EventSource for POST-based streams.
+ */
+export class EventSourcePolyfill {
+  private controller: AbortController;
+  private onMessageHandler: ((event: MessageEvent) => void) | null = null;
+  private onErrorHandler: (() => void) | null = null;
+  private onDoneHandler: (() => void) | null = null;
+
+  constructor(
+    url: string,
+    opts: {
+      headers: Record<string, string>;
+      payload: string;
+      withCredentials: boolean;
+    }
+  ) {
+    this.controller = new AbortController();
+
+    this.init(url, opts);
+  }
+
+  private async init(
+    url: string,
+    opts: {
+      headers: Record<string, string>;
+      payload: string;
+      withCredentials: boolean;
+    }
+  ) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: opts.headers,
+        body: opts.payload,
+        signal: this.controller.signal,
+      });
+
+      if (!res.body) {
+        this.onErrorHandler?.();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (line.startsWith("data:")) {
+            const data = line.slice("data:".length).trim();
+            this.onMessageHandler?.(new MessageEvent("message", { data }));
+          } else if (line.startsWith("event: done")) {
+            this.onDoneHandler?.();
+          }
+        }
+      }
+      this.onDoneHandler?.();
+    } catch (e) {
+      this.onErrorHandler?.();
+    }
+  }
+
+  close() {
+    this.controller.abort();
+  }
+
+  set onmessage(handler: ((event: MessageEvent) => void) | null) {
+    this.onMessageHandler = handler;
+  }
+
+  set onerror(handler: (() => void) | null) {
+    this.onErrorHandler = handler;
+  }
+
+  addEventListener(event: string, handler: () => void) {
+    if (event === "done") {
+      this.onDoneHandler = handler;
+    }
+  }
+
+  get readyState() {
+    return 1;
+  }
 }
