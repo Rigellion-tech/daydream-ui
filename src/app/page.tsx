@@ -131,6 +131,10 @@ export default function Home() {
         undefined,
         (delta) => {
           accumulated += delta;
+
+          // NEW: Force paragraphs by inserting double newlines after sentences
+          const markdownText = accumulated.replace(/([.?!])(\s+)/g, "$1\n\n");
+
           setMessages((prev) => {
             const msgs = [...prev];
             const idx = msgs.length - 1;
@@ -140,7 +144,7 @@ export default function Home() {
                   <span>🤖:</span>
                   <div className="mt-2">
                     <div className="prose dark:prose-invert">
-                      <ReactMarkdown>{accumulated}</ReactMarkdown>
+                      <ReactMarkdown>{markdownText}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
@@ -225,6 +229,10 @@ export default function Home() {
         secure_url,
         (delta) => {
           descAccum += delta;
+
+          // NEW: Force paragraphs by inserting double newlines after sentences
+          const markdownText = descAccum.replace(/([.?!])(\s+)/g, "$1\n\n");
+
           setMessages((prev) => {
             const msgs = [...prev];
             const idx = msgs.length - 1;
@@ -234,7 +242,7 @@ export default function Home() {
                   <span>🤖:</span>
                   <div className="mt-2">
                     <div className="prose dark:prose-invert">
-                      <ReactMarkdown>{descAccum}</ReactMarkdown>
+                      <ReactMarkdown>{markdownText}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
