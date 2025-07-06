@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { generateImage, streamChat, isImageRequest, ChatMessage } from "@/lib/api";
+import { generateImage, sendMessageToBackend, isImageRequest, ChatMessage } from "@/lib/api";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -85,12 +85,12 @@ export default function Home() {
   }, [messages]);
 
   /**
-   * Converts single spaces after punctuation into double newlines
-   * for better paragraph breaks in markdown.
+   * Converts punctuation into paragraphs for cleaner markdown.
    */
   function forceParagraphs(text: string) {
     return text
-      .replace(/([.?!])(\s+)/g, "$1\n\n")
+      .replace(/([.?!])(\S)/g, "$1 $2")
+      .replace(/([.?!])\s+/g, "$1\n\n")
       .replace(/\n{3,}/g, "\n\n");
   }
 
@@ -101,16 +101,6 @@ export default function Home() {
     const userMsg: ChatMessage = { role: "user", content: input };
     setRawMessages((prev) => [...prev, userMsg]);
     setMessages((prev) => [...prev, renderMessage(userMsg, prev.length)]);
-
-    const chatPayload: ChatMessage[] = [
-      {
-        role: "system",
-        content:
-          "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
-      },
-      ...rawMessages,
-      userMsg,
-    ];
 
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
@@ -136,49 +126,36 @@ export default function Home() {
       ]);
       setLoading(false);
     } else {
-      const assistantMsg: ChatMessage = { role: "assistant", content: "" };
-      setRawMessages((prev) => [...prev, assistantMsg]);
-      setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
-
-      let accumulated = "";
-      streamChat(
-        chatPayload,
-        undefined,
-        (delta) => {
-          console.log("Token from backend:", delta);
-          accumulated += delta;
-          const newMsg: ChatMessage = {
-            role: "assistant",
-            content: accumulated,
-          };
-
-          setRawMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = newMsg;
-            return updated;
-          });
-
-          setMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = renderMessage(
-              newMsg,
-              updated.length - 1
-            );
-            return updated;
-          });
+      const chatPayload: ChatMessage[] = [
+        {
+          role: "system",
+          content:
+            "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
         },
-        () => setLoading(false),
-        (err) => {
-          console.error("Stream error:", err);
-          setLoading(false);
-          setMessages((prev) => [
-            ...prev,
-            <div key={prev.length} className="w-full flex justify-start">
-              <div className="self-start text-red-500">Error: {err}</div>
-            </div>,
-          ]);
-        }
-      );
+        ...rawMessages,
+        userMsg,
+      ];
+
+      try {
+        const fullReply = await sendMessageToBackend(input, currentImageUrl);
+        const assistantMsg: ChatMessage = {
+          role: "assistant",
+          content: fullReply,
+        };
+
+        setRawMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
+      } catch (err) {
+        console.error("Chat API error:", err);
+        setMessages((prev) => [
+          ...prev,
+          <div key={prev.length} className="w-full flex justify-start">
+            <div className="self-start text-red-500">Error: {String(err)}</div>
+          </div>,
+        ]);
+      }
+
+      setLoading(false);
     }
 
     setInput("");
@@ -232,65 +209,32 @@ export default function Home() {
         />,
       ]);
 
-      const assistantMsg: ChatMessage = { role: "assistant", content: "" };
-      setRawMessages((prev) => [...prev, assistantMsg]);
-      setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
+      // Get backend's text response to the image
+      try {
+        const reply = await sendMessageToBackend("", secure_url);
+        const assistantMsg: ChatMessage = {
+          role: "assistant",
+          content: reply,
+        };
 
-      let descAccum = "";
-      const chatPayload: ChatMessage[] = [
-        {
-          role: "system",
-          content:
-            "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
-        },
-        ...rawMessages,
-        userMsg,
-      ];
-
-      streamChat(
-        chatPayload,
-        secure_url,
-        (delta) => {
-          console.log("Token from backend:", delta);
-          descAccum += delta;
-          const newMsg: ChatMessage = {
-            role: "assistant",
-            content: descAccum,
-          };
-
-          setRawMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = newMsg;
-            return updated;
-          });
-
-          setMessages((prev) => {
-            const updated = [...prev];
-            updated[updated.length - 1] = renderMessage(
-              newMsg,
-              updated.length - 1
-            );
-            return updated;
-          });
-        },
-        () => setLoading(false),
-        (err) => {
-          console.error("Stream error:", err);
-          setLoading(false);
-          setMessages((prev) => [
-            ...prev,
-            <div key={prev.length} className="w-full flex justify-start">
-              <div className="self-start text-red-500">Error: {err}</div>
-            </div>,
-          ]);
-        }
-      );
+        setRawMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
+      } catch (err) {
+        console.error("Chat API error:", err);
+        setMessages((prev) => [
+          ...prev,
+          <div key={prev.length} className="w-full flex justify-start">
+            <div className="self-start text-red-500">Error: {String(err)}</div>
+          </div>,
+        ]);
+      }
     } catch (error) {
       console.error("Upload error:", error);
       setLoading(false);
     }
 
     e.target.value = "";
+    setLoading(false);
   };
 
   const handleClear = () => {
