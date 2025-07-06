@@ -42,8 +42,8 @@ export default function Home() {
           }`}
         >
           {msg.role === "assistant" ? (
-            <div className="prose dark:prose-invert">
-              <ReactMarkdown>{forceParagraphs(msg.content)}</ReactMarkdown>
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
             </div>
           ) : (
             `🧑: ${msg.content}`
@@ -84,8 +84,14 @@ export default function Home() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  /**
+   * Converts single spaces after punctuation into double newlines
+   * for better paragraph breaks in markdown.
+   */
   function forceParagraphs(text: string) {
-    return text.replace(/([.?!])(\s+)/g, "$1\n\n");
+    return text
+      .replace(/([.?!])(\s+)/g, "$1\n\n")
+      .replace(/\n{3,}/g, "\n\n");
   }
 
   const handleSend = async () => {
@@ -139,6 +145,7 @@ export default function Home() {
         chatPayload,
         undefined,
         (delta) => {
+          console.log("Token from backend:", delta);
           accumulated += delta;
           const newMsg: ChatMessage = {
             role: "assistant",
@@ -162,6 +169,7 @@ export default function Home() {
         },
         () => setLoading(false),
         (err) => {
+          console.error("Stream error:", err);
           setLoading(false);
           setMessages((prev) => [
             ...prev,
@@ -243,6 +251,7 @@ export default function Home() {
         chatPayload,
         secure_url,
         (delta) => {
+          console.log("Token from backend:", delta);
           descAccum += delta;
           const newMsg: ChatMessage = {
             role: "assistant",
@@ -266,6 +275,7 @@ export default function Home() {
         },
         () => setLoading(false),
         (err) => {
+          console.error("Stream error:", err);
           setLoading(false);
           setMessages((prev) => [
             ...prev,
