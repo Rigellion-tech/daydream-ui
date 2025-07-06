@@ -61,8 +61,7 @@ export default function Home() {
       const plain = messages.map((msg) => {
         if (typeof msg === "string") return msg;
         if (React.isValidElement(msg)) {
-          const children = (msg as ReactElement<{ children: React.ReactNode }>).props
-            .children;
+          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
           if (Array.isArray(children)) return children[1] || "";
           return typeof children === "string" ? children : "";
         }
@@ -93,6 +92,26 @@ export default function Home() {
         </div>
       </div>,
     ]);
+
+    // ---------------------------
+    // NEW: Build full conversation history
+    // ---------------------------
+    const conversationHistory = messages
+      .map((msg) => {
+        if (typeof msg === "string") return msg;
+        if (React.isValidElement(msg)) {
+          const children = (msg as ReactElement<{ children: React.ReactNode }>).props.children;
+          if (Array.isArray(children)) return children[1] || "";
+          return typeof children === "string" ? children : "";
+        }
+        return "";
+      })
+      .filter((line) => line)
+      .join("\n");
+
+    const fullPrompt = conversationHistory
+      ? `${conversationHistory}\n🧑: ${input}`
+      : `🧑: ${input}`;
 
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
@@ -127,12 +146,12 @@ export default function Home() {
 
       let accumulated = "";
       streamChat(
-        input,
+        fullPrompt,
         undefined,
         (delta) => {
           accumulated += delta;
 
-          // NEW: Force paragraphs by inserting double newlines after sentences
+          // Add forced newlines after sentences
           const markdownText = accumulated.replace(/([.?!])(\s+)/g, "$1\n\n");
 
           setMessages((prev) => {
@@ -230,7 +249,6 @@ export default function Home() {
         (delta) => {
           descAccum += delta;
 
-          // NEW: Force paragraphs by inserting double newlines after sentences
           const markdownText = descAccum.replace(/([.?!])(\s+)/g, "$1\n\n");
 
           setMessages((prev) => {
