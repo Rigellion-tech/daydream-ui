@@ -37,6 +37,14 @@ export default function Home() {
 
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
+      const baseClasses =
+        "whitespace-pre-wrap p-4 rounded-2xl shadow-md max-w-[80%] transition duration-300 ease-in-out transform hover:scale-[1.02]";
+
+      const userClasses =
+        "self-end bg-gradient-to-r from-cyan-400 to-cyan-600 text-black";
+      const assistantClasses =
+        "self-start bg-black text-yellow-300";
+
       return (
         <div
           key={key}
@@ -45,10 +53,8 @@ export default function Home() {
           }`}
         >
           <div
-            className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
-              msg.role === "user"
-                ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
-                : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+            className={`${baseClasses} ${
+              msg.role === "user" ? userClasses : assistantClasses
             }`}
           >
             {msg.role === "assistant" ? (
@@ -102,7 +108,6 @@ export default function Home() {
       .replace(/([.?!])\s+(?=[A-Z])/g, "$1\n\n")
       .replace(/\n{3,}/g, "\n\n");
   }
-  
 
   const addTypingBubble = () => {
     const typingBubble = (
@@ -110,7 +115,7 @@ export default function Home() {
         key={`typing-${messages.length}`}
         className="w-full flex justify-start animate-pulse"
       >
-        <div className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+        <div className="self-start bg-cyan-500 text-black p-3 rounded-2xl max-w-[80%] shadow-md">
           <span>🤖:</span> <span className="ml-2">Typing...</span>
         </div>
       </div>
@@ -148,7 +153,7 @@ export default function Home() {
         role: "assistant",
         content: "✅ Here's your dream image:",
       };
-      removeTypingBubble(); // ✅ PATCH
+      removeTypingBubble();
       setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
         ...prev,
@@ -160,7 +165,7 @@ export default function Home() {
           alt="AI Generated"
           width={512}
           height={512}
-          className="rounded-lg border border-gray-300 dark:border-gray-700"
+          className="rounded-xl border-4 border-yellow-300 shadow-lg"
         />,
       ]);
       setLoading(false);
@@ -171,7 +176,7 @@ export default function Home() {
           role: "assistant",
           content: fullReply,
         };
-        removeTypingBubble(); // ✅ PATCH
+        removeTypingBubble();
         setRawMessages((prev) => [...prev, assistantMsg]);
         setMessages((prev) => [
           ...prev,
@@ -179,7 +184,7 @@ export default function Home() {
         ]);
       } catch (err) {
         console.error("Chat API error:", err);
-        removeTypingBubble(); // ✅ PATCH
+        removeTypingBubble();
         setMessages((prev) => [
           ...prev,
           <div key={prev.length} className="w-full flex justify-start">
@@ -239,7 +244,7 @@ export default function Home() {
           alt="User upload"
           width={256}
           height={256}
-          className="rounded-lg border border-gray-300 dark:border-gray-700"
+          className="rounded-xl border-4 border-yellow-300 shadow-lg"
         />,
       ]);
 
@@ -251,7 +256,7 @@ export default function Home() {
           role: "assistant",
           content: reply,
         };
-        removeTypingBubble(); // ✅ PATCH
+        removeTypingBubble();
         setRawMessages((prev) => [...prev, assistantMsg]);
         setMessages((prev) => [
           ...prev,
@@ -259,7 +264,7 @@ export default function Home() {
         ]);
       } catch (err) {
         console.error("Chat API error:", err);
-        removeTypingBubble(); // ✅ PATCH
+        removeTypingBubble();
         setMessages((prev) => [
           ...prev,
           <div key={prev.length} className="w-full flex justify-start">
@@ -289,18 +294,18 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-white dark:bg-black text-black dark:text-white">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-4 flex items-center gap-2">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-gradient-to-br from-black via-zinc-900 to-black text-yellow-300">
+      <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 flex items-center gap-2 text-cyan-400 drop-shadow-md">
         <span>💬</span> DayDream AI Assistant
       </h1>
       <div className="flex justify-between items-center w-full max-w-2xl mb-4">
         <button
           onClick={handleClear}
-          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+          className="px-3 py-1 bg-yellow-400 text-black font-bold rounded hover:bg-yellow-500 text-sm transition duration-300"
         >
           Clear Chat 🗑️
         </button>
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <label className="flex items-center gap-2 text-sm text-gray-300">
           <input
             type="checkbox"
             checked={useHighQuality}
@@ -312,17 +317,17 @@ export default function Home() {
       </div>
       <div
         ref={messageListRef}
-        className="flex flex-col gap-3 border p-4 rounded h-[500px] overflow-y-auto bg-gray-100 dark:bg-zinc-900 w-full max-w-2xl"
+        className="flex flex-col gap-4 border border-yellow-400 p-4 rounded-2xl h-[500px] overflow-y-auto bg-black bg-opacity-50 w-full max-w-2xl"
         aria-live="polite"
       >
         {messages.map((msg, i) => (
           <React.Fragment key={i}>{msg}</React.Fragment>
         ))}
       </div>
-      <div className="flex flex-col sm:flex-row gap-2 items-center w-full max-w-2xl">
+      <div className="flex flex-col sm:flex-row gap-2 items-center w-full max-w-2xl mt-4">
         <input
           type="text"
-          className="flex-1 px-4 py-2 border rounded dark:bg-zinc-800"
+          className="flex-1 px-4 py-2 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
           placeholder="Ask something..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -332,8 +337,10 @@ export default function Home() {
         <button
           onClick={handleSend}
           disabled={loading}
-          className={`px-4 py-2 rounded text-white ${
-            loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          className={`px-4 py-2 rounded-2xl text-black font-bold transition duration-300 ${
+            loading
+              ? "bg-gray-400"
+              : "bg-yellow-400 hover:bg-yellow-500"
           }`}
         >
           {loading ? "Sending…" : "Send"}
@@ -341,7 +348,7 @@ export default function Home() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
-          className="px-4 py-2 bg-gray-300 text-black rounded dark:bg-zinc-700 dark:text-white hover:bg-gray-400 dark:hover:bg-zinc-600"
+          className="px-4 py-2 bg-cyan-400 text-black rounded-2xl font-bold hover:bg-cyan-500 transition duration-300"
         >
           📎
         </button>
