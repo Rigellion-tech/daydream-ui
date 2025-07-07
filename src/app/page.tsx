@@ -94,6 +94,30 @@ export default function Home() {
       .replace(/\n{3,}/g, "\n\n");
   }
 
+  const addTypingBubble = () => {
+    const typingBubble = (
+      <div
+        key={`typing-${messages.length}`}
+        className="w-full flex justify-start animate-pulse"
+      >
+        <div className="self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white p-2 rounded-lg max-w-[80%]">
+          <span>🤖:</span> <span className="ml-2">Typing...</span>
+        </div>
+      </div>
+    );
+    setMessages((prev) => [...prev, typingBubble]);
+  };
+
+  const removeTypingBubble = () => {
+    setMessages((prev) => prev.filter((msg) => {
+      return !(
+        React.isValidElement(msg) &&
+        typeof msg.key === "string" &&
+        msg.key.startsWith("typing-")
+      );
+    }));
+  };
+
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;
     setLoading(true);
@@ -101,6 +125,8 @@ export default function Home() {
     const userMsg: ChatMessage = { role: "user", content: input };
     setRawMessages((prev) => [...prev, userMsg]);
     setMessages((prev) => [...prev, renderMessage(userMsg, prev.length)]);
+
+    addTypingBubble();
 
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
@@ -112,7 +138,7 @@ export default function Home() {
       };
       setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => !String(m.key).startsWith("typing-")),
         renderMessage(assistantMsg, prev.length),
         <Image
           key={`img-${prev.length}`}
@@ -126,16 +152,6 @@ export default function Home() {
       ]);
       setLoading(false);
     } else {
-      const chatPayload: ChatMessage[] = [
-        {
-          role: "system",
-          content:
-            "You are DayDream AI, a friendly, expert transformation coach. You can see and reason about images when provided. Respond with clear, step-by-step guidance and ask questions as needed.",
-        },
-        ...rawMessages,
-        userMsg,
-      ];
-
       try {
         const fullReply = await sendMessageToBackend(input, currentImageUrl);
         const assistantMsg: ChatMessage = {
@@ -144,11 +160,14 @@ export default function Home() {
         };
 
         setRawMessages((prev) => [...prev, assistantMsg]);
-        setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
+        setMessages((prev) => [
+          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          renderMessage(assistantMsg, prev.length),
+        ]);
       } catch (err) {
         console.error("Chat API error:", err);
         setMessages((prev) => [
-          ...prev,
+          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
           <div key={prev.length} className="w-full flex justify-start">
             <div className="self-start text-red-500">Error: {String(err)}</div>
           </div>,
@@ -209,7 +228,8 @@ export default function Home() {
         />,
       ]);
 
-      // Get backend's text response to the image
+      addTypingBubble();
+
       try {
         const reply = await sendMessageToBackend("", secure_url);
         const assistantMsg: ChatMessage = {
@@ -218,11 +238,14 @@ export default function Home() {
         };
 
         setRawMessages((prev) => [...prev, assistantMsg]);
-        setMessages((prev) => [...prev, renderMessage(assistantMsg, prev.length)]);
+        setMessages((prev) => [
+          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          renderMessage(assistantMsg, prev.length),
+        ]);
       } catch (err) {
         console.error("Chat API error:", err);
         setMessages((prev) => [
-          ...prev,
+          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
           <div key={prev.length} className="w-full flex justify-start">
             <div className="self-start text-red-500">Error: {String(err)}</div>
           </div>,
