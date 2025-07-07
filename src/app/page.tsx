@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { generateImage, sendMessageToBackend, isImageRequest, ChatMessage } from "@/lib/api";
+import {
+  generateImage,
+  sendMessageToBackend,
+  isImageRequest,
+  ChatMessage,
+} from "@/lib/api";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -12,7 +17,9 @@ export default function Home() {
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
   const [useHighQuality, setUseHighQuality] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(
+    undefined
+  );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -28,30 +35,35 @@ export default function Home() {
     localStorage.setItem("user_id", user_id);
   }, [user_id]);
 
-  const renderMessage = useCallback((msg: ChatMessage, key: number) => {
-    return (
-      <div
-        key={key}
-        className={`w-full flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-      >
+  const renderMessage = useCallback(
+    (msg: ChatMessage, key: number) => {
+      return (
         <div
-          className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
-            msg.role === "user"
-              ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
-              : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+          key={key}
+          className={`w-full flex ${
+            msg.role === "user" ? "justify-end" : "justify-start"
           }`}
         >
-          {msg.role === "assistant" ? (
-            <div className="prose dark:prose-invert max-w-none">
-              <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
-            </div>
-          ) : (
-            `🧑: ${msg.content}`
-          )}
+          <div
+            className={`whitespace-pre-wrap p-2 rounded-lg max-w-[80%] ${
+              msg.role === "user"
+                ? "self-end bg-blue-100 dark:bg-blue-800 text-black dark:text-white"
+                : "self-start bg-gray-200 dark:bg-gray-700 text-black dark:text-white"
+            }`}
+          >
+            {msg.role === "assistant" ? (
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
+              </div>
+            ) : (
+              `🧑: ${msg.content}`
+            )}
+          </div>
         </div>
-      </div>
-    );
-  }, []);
+      );
+    },
+    []
+  );
 
   useEffect(() => {
     (async () => {
@@ -84,9 +96,6 @@ export default function Home() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  /**
-   * Converts punctuation into paragraphs for cleaner markdown.
-   */
   function forceParagraphs(text: string) {
     return text
       .replace(/([.?!])(\S)/g, "$1 $2")
@@ -109,13 +118,15 @@ export default function Home() {
   };
 
   const removeTypingBubble = () => {
-    setMessages((prev) => prev.filter((msg) => {
-      return !(
-        React.isValidElement(msg) &&
-        typeof msg.key === "string" &&
-        msg.key.startsWith("typing-")
-      );
-    }));
+    setMessages((prev) =>
+      prev.filter((msg) => {
+        return !(
+          React.isValidElement(msg) &&
+          typeof msg.key === "string" &&
+          msg.key.startsWith("typing-")
+        );
+      })
+    );
   };
 
   const handleSend = async () => {
@@ -136,9 +147,10 @@ export default function Home() {
         role: "assistant",
         content: "✅ Here's your dream image:",
       };
+      removeTypingBubble(); // ✅ PATCH
       setRawMessages((prev) => [...prev, assistantMsg]);
       setMessages((prev) => [
-        ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+        ...prev,
         renderMessage(assistantMsg, prev.length),
         <Image
           key={`img-${prev.length}`}
@@ -158,22 +170,24 @@ export default function Home() {
           role: "assistant",
           content: fullReply,
         };
-
+        removeTypingBubble(); // ✅ PATCH
         setRawMessages((prev) => [...prev, assistantMsg]);
         setMessages((prev) => [
-          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          ...prev,
           renderMessage(assistantMsg, prev.length),
         ]);
       } catch (err) {
         console.error("Chat API error:", err);
+        removeTypingBubble(); // ✅ PATCH
         setMessages((prev) => [
-          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          ...prev,
           <div key={prev.length} className="w-full flex justify-start">
-            <div className="self-start text-red-500">Error: {String(err)}</div>
+            <div className="self-start text-red-500">
+              Error: {String(err)}
+            </div>
           </div>,
         ]);
       }
-
       setLoading(false);
     }
 
@@ -236,18 +250,21 @@ export default function Home() {
           role: "assistant",
           content: reply,
         };
-
+        removeTypingBubble(); // ✅ PATCH
         setRawMessages((prev) => [...prev, assistantMsg]);
         setMessages((prev) => [
-          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          ...prev,
           renderMessage(assistantMsg, prev.length),
         ]);
       } catch (err) {
         console.error("Chat API error:", err);
+        removeTypingBubble(); // ✅ PATCH
         setMessages((prev) => [
-          ...prev.filter((m) => !String(m.key).startsWith("typing-")),
+          ...prev,
           <div key={prev.length} className="w-full flex justify-start">
-            <div className="self-start text-red-500">Error: {String(err)}</div>
+            <div className="self-start text-red-500">
+              Error: {String(err)}
+            </div>
           </div>,
         ]);
       }
