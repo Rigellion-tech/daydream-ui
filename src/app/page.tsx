@@ -98,10 +98,11 @@ export default function Home() {
 
   function forceParagraphs(text: string) {
     return text
-      .replace(/([.?!])(\S)/g, "$1 $2")
-      .replace(/([.?!])\s+/g, "$1\n\n")
+      .replace(/([.?!])([^\d.])/g, "$1 $2")
+      .replace(/([.?!])\s+(?=[A-Z])/g, "$1\n\n")
       .replace(/\n{3,}/g, "\n\n");
   }
+  
 
   const addTypingBubble = () => {
     const typingBubble = (
