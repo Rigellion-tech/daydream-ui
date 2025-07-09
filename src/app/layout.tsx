@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     "transformation",
   ],
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon-new.png",
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
@@ -62,7 +62,7 @@ export default function RootLayout({
       <head>
         <meta name="robots" content="index, follow" />
         <meta name="theme-color" content="#00ffff" />
-        <link rel="icon" href="/favicon.png" />
+        <link rel="icon" href="/favicon-new.png" type="image/png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
