@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
+import Cookies from "js-cookie";
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -27,13 +28,18 @@ export default function Home() {
 
   const user_id = useRef<string | null>(null);
 
-  // ✅ PATCH: Read user_id from cookie
+  // ✅ PATCH: Read user_id from cookie using js-cookie
   useEffect(() => {
-    const match = document.cookie.match(/user_id=([^;]+)/);
-    if (match) {
-      user_id.current = match[1];
+    const id = Cookies.get("user_id");
+    if (id) {
+      user_id.current = id;
     }
   }, []);
+
+  const handleSignOut = () => {
+    Cookies.remove("user_id");
+    window.location.href = "/login";
+  };
 
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
@@ -317,6 +323,12 @@ export default function Home() {
             className="px-3 py-1 bg-yellow-400 text-black font-bold rounded hover:bg-yellow-500 text-sm transition duration-300"
           >
             Clear Chat 🗑️
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="px-3 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 text-sm transition duration-300"
+          >
+            Sign Out 🚪
           </button>
           <label className="flex items-center gap-2 text-sm text-gray-300">
             <input
