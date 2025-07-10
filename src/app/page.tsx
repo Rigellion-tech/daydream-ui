@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Head from "next/head";
 import Image from "next/image";
 import {
@@ -13,6 +14,8 @@ import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 
 export default function Home() {
+  const router = useRouter();
+
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
@@ -25,16 +28,22 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
-  const user_id = useRef(
-    typeof window !== "undefined"
-      ? localStorage.getItem("user_id") ||
-        `user-${Math.random().toString(36).substring(2, 10)}`
-      : "user-temp"
-  ).current;
+  const user_id = useRef<string | null>(null);
+
+  // ✅ NEW: Protect this route
+  useEffect(() => {
+    const uid = localStorage.getItem("user_id");
+    if (!uid) {
+      router.push("/login");
+    } else {
+      user_id.current = uid;
+    }
+  }, [router]);
 
   useEffect(() => {
-    localStorage.setItem("user_id", user_id);
-  }, [user_id]);
+    if (!user_id.current) return;
+    localStorage.setItem("user_id", user_id.current);
+  }, [user_id.current]);
 
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
@@ -73,9 +82,11 @@ export default function Home() {
   );
 
   useEffect(() => {
+    if (!user_id.current) return;
+
     (async () => {
       const res = await fetch(
-        `https://daydreamforge.onrender.com/memory?user_id=${user_id}`
+        `https://daydreamforge.onrender.com/memory?user_id=${user_id.current}`
       );
       const data = await res.json();
       if (data.messages) {
@@ -85,18 +96,18 @@ export default function Home() {
         setRawMessages(raw);
       }
     })();
-  }, [user_id, renderMessage]);
+  }, [user_id.current, renderMessage]);
 
   useEffect(() => {
-    if (!rawMessages.length) return;
+    if (!rawMessages.length || !user_id.current) return;
     (async () => {
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, messages: rawMessages }),
+        body: JSON.stringify({ user_id: user_id.current, messages: rawMessages }),
       });
     })().catch(console.error);
-  }, [rawMessages, user_id]);
+  }, [rawMessages, user_id.current]);
 
   useEffect(() => {
     const el = messageListRef.current;
@@ -138,6 +149,8 @@ export default function Home() {
 
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;
+    if (!user_id.current) return;
+
     setLoading(true);
 
     const userMsg: ChatMessage = { role: "user", content: input };
@@ -204,7 +217,7 @@ export default function Home() {
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || loading) return;
+    if (!file || loading || !user_id.current) return;
     setLoading(true);
 
     const form = new FormData();
@@ -287,10 +300,11 @@ export default function Home() {
   const handleClear = () => {
     setMessages([]);
     setRawMessages([]);
+    if (!user_id.current) return;
     fetch("https://daydreamforge.onrender.com/memory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id, messages: [] }),
+      body: JSON.stringify({ user_id: user_id.current, messages: [] }),
     }).catch(console.error);
   };
 
