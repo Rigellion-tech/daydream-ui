@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface RequestCodeResponse {
+  status: string;
+  error?: string;
+}
+
+interface VerifyCodeResponse {
+  user_id: string;
+  error?: string;
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -12,7 +22,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function requestCode(email: string) {
+  async function requestCode(email: string): Promise<RequestCodeResponse> {
     const res = await fetch(
       "https://daydreamforge.onrender.com/auth/request_code",
       {
@@ -22,14 +32,17 @@ export default function LoginPage() {
       }
     );
 
-    const data = await res.json();
+    const data: RequestCodeResponse = await res.json();
     if (!res.ok) {
       throw new Error(data.error || "Failed to send code");
     }
     return data;
   }
 
-  async function verifyCode(email: string, code: string) {
+  async function verifyCode(
+    email: string,
+    code: string
+  ): Promise<VerifyCodeResponse> {
     const res = await fetch(
       "https://daydreamforge.onrender.com/auth/verify_code",
       {
@@ -39,7 +52,7 @@ export default function LoginPage() {
       }
     );
 
-    const data = await res.json();
+    const data: VerifyCodeResponse = await res.json();
     if (!res.ok) {
       throw new Error(data.error || "Verification failed");
     }
@@ -55,8 +68,10 @@ export default function LoginPage() {
       await requestCode(email);
       setMessage("Check your email for the login code!");
       setStep("code");
-    } catch (err: any) {
-      setMessage(err.message);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred.";
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -69,8 +84,10 @@ export default function LoginPage() {
       const res = await verifyCode(email, code);
       setMessage(`Logged in as ${res.user_id}`);
       router.push("/");
-    } catch (err: any) {
-      setMessage(err.message);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred.";
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -81,7 +98,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-gray-800 rounded-lg p-6">
         {step === "email" && (
           <>
-            <h2 className="text-2xl mb-4 text-cyan-400">Sign in to DayDream Forge</h2>
+            <h2 className="text-2xl mb-4 text-cyan-400">
+              Sign in to DayDream Forge
+            </h2>
             <input
               type="email"
               placeholder="you@email.com"
@@ -101,7 +120,9 @@ export default function LoginPage() {
 
         {step === "code" && (
           <>
-            <h2 className="text-2xl mb-4 text-yellow-400">Enter Your Code</h2>
+            <h2 className="text-2xl mb-4 text-yellow-400">
+              Enter Your Code
+            </h2>
             <input
               type="text"
               placeholder="6-digit code"
