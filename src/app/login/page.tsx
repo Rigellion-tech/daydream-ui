@@ -57,7 +57,9 @@ export default function LoginPage() {
       throw new Error(data.error || "Verification failed");
     }
 
-    localStorage.setItem("user_id", data.user_id);
+    // ✅ PATCH HERE: store user_id in cookie instead of localStorage
+    document.cookie = `user_id=${data.user_id}; path=/; max-age=31536000; SameSite=Lax`;
+
     return data;
   }
 

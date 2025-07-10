@@ -30,20 +30,13 @@ export default function Home() {
 
   const user_id = useRef<string | null>(null);
 
-  // ✅ NEW: Protect this route
+  // ✅ PATCH: Read user_id from cookie
   useEffect(() => {
-    const uid = localStorage.getItem("user_id");
-    if (!uid) {
-      router.push("/login");
-    } else {
-      user_id.current = uid;
+    const match = document.cookie.match(/user_id=([^;]+)/);
+    if (match) {
+      user_id.current = match[1];
     }
-  }, [router]);
-
-  useEffect(() => {
-    if (!user_id.current) return;
-    localStorage.setItem("user_id", user_id.current);
-  }, [user_id.current]);
+  }, []);
 
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
