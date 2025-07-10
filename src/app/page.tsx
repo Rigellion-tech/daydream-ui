@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Head from "next/head";
 import Image from "next/image";
 import {
@@ -14,8 +13,6 @@ import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 
 export default function Home() {
-  const router = useRouter();
-
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
