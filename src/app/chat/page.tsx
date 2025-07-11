@@ -13,7 +13,6 @@ import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import Cookies from "js-cookie";
 import Link from "next/link"; // ✅ PATCH: Add Link import
-import { useRouter } from "next/navigation"; // ✅ PATCH: Add router for future redirects if needed
 
 export default function Home() {
   const [input, setInput] = useState("");
