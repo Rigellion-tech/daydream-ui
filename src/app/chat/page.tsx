@@ -24,6 +24,11 @@ export default function Home() {
     undefined
   );
 
+  const [userName, setUserName] = useState<string>("User");
+  const [userEmail, setUserEmail] = useState<string>("user@example.com");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/avatar.png");
+  const [showMenu, setShowMenu] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +39,20 @@ export default function Home() {
     if (id) {
       user_id.current = id;
     }
+
+    const name = Cookies.get("user_name");
+    const email = Cookies.get("user_email");
+    const avatar = Cookies.get("user_avatar");
+
+    if (name) setUserName(name);
+    if (email) setUserEmail(email);
+    if (avatar) setUserAvatarUrl(avatar);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setShowMenu(false);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
   }, []);
 
   const renderMessage = useCallback(
@@ -309,44 +328,68 @@ export default function Home() {
         />
       </Head>
 
-      <div className="relative flex flex-col h-screen w-screen bg-gradient-to-br from-black via-gray-900 to-black text-yellow-300 font-bold overflow-hidden">
+      <div className="relative flex flex-col h-screen w-screen bg-black text-yellow-300 font-bold overflow-hidden">
 
-        {/* Sign Out */}
-        <Link
-          href="/logout"
-          className="absolute top-4 right-4 px-3 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 text-sm transition duration-300"
-        >
-          Sign Out 🚪
-        </Link>
-
-        <header className="flex justify-center items-center py-4">
-          <h1 className="text-4xl sm:text-5xl font-extrabold flex items-center gap-2 text-cyan-400 drop-shadow-md">
+        {/* HEADER WITH DROPDOWN */}
+        <header className="flex justify-between items-center px-4 py-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2 text-cyan-400">
             <span>💬</span> DayDream AI Assistant
           </h1>
+
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu((prev) => !prev);
+              }}
+              className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400 hover:scale-105 transition"
+            >
+              <img
+                src={userAvatarUrl}
+                alt={userName}
+                className="w-full h-full object-cover"
+              />
+            </button>
+
+            {showMenu && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg bg-black border border-yellow-400 z-50 text-yellow-300"
+              >
+                <div className="flex flex-col items-center p-4 border-b border-yellow-400">
+                  <img
+                    src={userAvatarUrl}
+                    alt={userName}
+                    className="w-16 h-16 rounded-full border-2 border-yellow-400 mb-2 object-cover"
+                  />
+                  <p className="font-bold text-lg">Hi, {userName}!</p>
+                  <p className="text-xs text-gray-400">{userEmail}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    handleClear();
+                    setShowMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-yellow-700 border-b border-yellow-400"
+                >
+                  Clear Chat 🗑️
+                </button>
+                <Link
+                  href="/logout"
+                  className="block w-full text-left px-4 py-3 hover:bg-yellow-700"
+                  onClick={() => setShowMenu(false)}
+                >
+                  Sign Out 🚪
+                </Link>
+              </div>
+            )}
+          </div>
         </header>
 
-        <main className="flex flex-col flex-grow px-4 pb-4 overflow-hidden">
-          <div className="flex justify-between items-center w-full mb-2">
-            <button
-              onClick={handleClear}
-              className="px-3 py-1 bg-yellow-400 text-black font-bold rounded hover:bg-yellow-500 text-sm transition duration-300"
-            >
-              Clear Chat 🗑️
-            </button>
-            <label className="flex items-center gap-2 text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={useHighQuality}
-                onChange={() => setUseHighQuality((v) => !v)}
-                className="h-4 w-4"
-              />
-              High Quality (Segmind)
-            </label>
-          </div>
-
+        <main className="flex flex-col flex-grow overflow-hidden">
           <div
             ref={messageListRef}
-            className="flex flex-col gap-4 border border-yellow-400 p-4 rounded-2xl flex-grow overflow-y-auto bg-black bg-opacity-50"
+            className="flex flex-col gap-4 flex-grow overflow-y-auto p-4"
             aria-live="polite"
           >
             {messages.map((msg, i) => (
@@ -354,7 +397,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 items-center mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 items-center mt-4 px-4 pb-4">
             <input
               type="text"
               className="flex-1 px-4 py-3 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
