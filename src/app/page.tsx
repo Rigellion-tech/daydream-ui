@@ -58,12 +58,41 @@ export default function LoginPage() {
       throw new Error(data.error || "Verification failed");
     }
 
-    // ✅ PATCH: store user_id cookie
+    // Save user_id cookie
     Cookies.set("user_id", data.user_id, {
       path: "/",
       expires: 365,
       sameSite: "Lax",
     });
+
+    // 🔥 PATCH START - Save user name, email, and avatar
+
+    // Derive user name from email before '@'
+    const userName = email.split("@")[0] || "User";
+
+    // Fallback avatar image (replace with your real avatar logic!)
+    const avatarUrl =
+      "https://res.cloudinary.com/demo/image/upload/v1700000000/avatar_placeholder.png";
+
+    Cookies.set("user_name", userName, {
+      path: "/",
+      expires: 365,
+      sameSite: "Lax",
+    });
+
+    Cookies.set("user_email", email, {
+      path: "/",
+      expires: 365,
+      sameSite: "Lax",
+    });
+
+    Cookies.set("user_avatar", avatarUrl, {
+      path: "/",
+      expires: 365,
+      sameSite: "Lax",
+    });
+
+    // 🔥 PATCH END
 
     return data;
   }
