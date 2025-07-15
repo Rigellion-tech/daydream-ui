@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Head from "next/head";
-import Image from "next/image";
+import NextImage from "next/image";
 import {
   generateImage,
   sendMessageToBackend,
@@ -18,7 +18,6 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
-  const [useHighQuality, setUseHighQuality] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(
     undefined
@@ -26,7 +25,9 @@ export default function Home() {
 
   const [userName, setUserName] = useState<string>("User");
   const [userEmail, setUserEmail] = useState<string>("user@example.com");
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/avatar.png");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>(
+    "/avatar.png"
+  );
   const [showMenu, setShowMenu] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,7 +47,11 @@ export default function Home() {
 
     if (name) setUserName(name);
     if (email) setUserEmail(email);
-    if (avatar) setUserAvatarUrl(avatar);
+    if (avatar) {
+      setUserAvatarUrl(avatar);
+    } else {
+      setUserAvatarUrl("/avatar.png");
+    }
   }, []);
 
   useEffect(() => {
@@ -172,7 +177,7 @@ export default function Home() {
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
-      const url = await generateImage(promptText, useHighQuality);
+      const url = await generateImage(promptText, false);
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: "✅ Here's your dream image:",
@@ -182,7 +187,7 @@ export default function Home() {
       setMessages((prev) => [
         ...prev,
         renderMessage(assistantMsg, prev.length),
-        <Image
+        <NextImage
           key={`img-${prev.length}`}
           unoptimized
           src={url}
@@ -261,7 +266,7 @@ export default function Home() {
       setMessages((prev) => [
         ...prev,
         renderMessage(userMsg, prev.length),
-        <Image
+        <NextImage
           key={`upload-${prev.length}`}
           unoptimized
           src={secure_url}
@@ -329,8 +334,6 @@ export default function Home() {
       </Head>
 
       <div className="relative flex flex-col h-screen w-screen bg-black text-yellow-300 font-bold overflow-hidden">
-
-        {/* HEADER WITH DROPDOWN */}
         <header className="flex justify-between items-center px-4 py-2">
           <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2 text-cyan-400">
             <span>💬</span> DayDream AI Assistant
@@ -344,10 +347,12 @@ export default function Home() {
               }}
               className="w-10 h-10 rounded-full overflow-hidden border-2 border-yellow-400 hover:scale-105 transition"
             >
-              <img
+              <NextImage
                 src={userAvatarUrl}
                 alt={userName}
-                className="w-full h-full object-cover"
+                width={40}
+                height={40}
+                className="rounded-full object-cover"
               />
             </button>
 
@@ -357,10 +362,12 @@ export default function Home() {
                 className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg bg-black border border-yellow-400 z-50 text-yellow-300"
               >
                 <div className="flex flex-col items-center p-4 border-b border-yellow-400">
-                  <img
+                  <NextImage
                     src={userAvatarUrl}
                     alt={userName}
-                    className="w-16 h-16 rounded-full border-2 border-yellow-400 mb-2 object-cover"
+                    width={64}
+                    height={64}
+                    className="rounded-full border-2 border-yellow-400 mb-2 object-cover"
                   />
                   <p className="font-bold text-lg">Hi, {userName}!</p>
                   <p className="text-xs text-gray-400">{userEmail}</p>
