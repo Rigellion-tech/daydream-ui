@@ -14,6 +14,15 @@ interface VerifyCodeResponse {
   error?: string;
 }
 
+// ✅ Define CookieAttributes type manually
+type CookieAttributes = {
+  expires?: number | Date;
+  path?: string;
+  domain?: string;
+  secure?: boolean;
+  sameSite?: "lax" | "strict" | "none";
+};
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -65,16 +74,14 @@ export default function LoginPage() {
     const avatarUrl =
       "https://res.cloudinary.com/demo/image/upload/v1700000000/avatar_placeholder.png";
 
-    // ✅ Declare cookie options properly
-    const cookieOptions = {
-      expires: 365,       // persistent cookie
-      path: "/",          // entire site
-      sameSite: "lax",    // protects against CSRF
-      secure: true        // HTTPS only
-      // domain: ".yourdomain.com" // optionally set your domain for Vercel
+    // ✅ Define cookie options with correct typing
+    const cookieOptions: CookieAttributes = {
+      expires: 365,
+      path: "/",
+      sameSite: "lax",   // lowercase required
+      secure: true,
     };
 
-    // ✅ Save cookies
     Cookies.set("user_id", data.user_id, cookieOptions);
     Cookies.set("user_name", userName, cookieOptions);
     Cookies.set("user_email", email, cookieOptions);
