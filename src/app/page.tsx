@@ -69,7 +69,7 @@ export default function LoginPage() {
     const cookieOptions = {
       expires: 365,       // persistent cookie
       path: "/",          // entire site
-      sameSite: "Lax",    // protects against CSRF
+      sameSite: "lax",    // protects against CSRF
       secure: true        // HTTPS only
       // domain: ".yourdomain.com" // optionally set your domain for Vercel
     };
