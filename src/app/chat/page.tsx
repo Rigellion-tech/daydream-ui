@@ -12,7 +12,7 @@ import {
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import Cookies from "js-cookie";
-import Link from "next/link"; // ✅ PATCH: Add Link import
+import Link from "next/link";
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -35,9 +35,6 @@ export default function Home() {
       user_id.current = id;
     }
   }, []);
-
-  // ✅ PATCH: Remove direct cookie clearing
-  // Instead, sign out is handled by /logout page
 
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
@@ -312,9 +309,9 @@ export default function Home() {
         />
       </Head>
 
-      <div className="relative flex flex-col items-center justify-center min-h-screen p-6 sm:p-10 bg-gradient-to-br from-black via-gray-900 to-black text-yellow-300 font-bold">
+      <div className="relative flex flex-col h-screen w-screen bg-gradient-to-br from-black via-gray-900 to-black text-yellow-300 font-bold overflow-hidden">
 
-        {/* ✅ PATCH: Sign Out button moved to top right */}
+        {/* Sign Out */}
         <Link
           href="/logout"
           className="absolute top-4 right-4 px-3 py-1 bg-red-500 text-white font-bold rounded hover:bg-red-600 text-sm transition duration-300"
@@ -322,73 +319,77 @@ export default function Home() {
           Sign Out 🚪
         </Link>
 
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 flex items-center gap-2 text-cyan-400 drop-shadow-md">
-          <span>💬</span> DayDream AI Assistant
-        </h1>
+        <header className="flex justify-center items-center py-4">
+          <h1 className="text-4xl sm:text-5xl font-extrabold flex items-center gap-2 text-cyan-400 drop-shadow-md">
+            <span>💬</span> DayDream AI Assistant
+          </h1>
+        </header>
 
-        <div className="flex justify-between items-center w-full max-w-2xl mb-4">
-          <button
-            onClick={handleClear}
-            className="px-3 py-1 bg-yellow-400 text-black font-bold rounded hover:bg-yellow-500 text-sm transition duration-300"
+        <main className="flex flex-col flex-grow px-4 pb-4 overflow-hidden">
+          <div className="flex justify-between items-center w-full mb-2">
+            <button
+              onClick={handleClear}
+              className="px-3 py-1 bg-yellow-400 text-black font-bold rounded hover:bg-yellow-500 text-sm transition duration-300"
+            >
+              Clear Chat 🗑️
+            </button>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={useHighQuality}
+                onChange={() => setUseHighQuality((v) => !v)}
+                className="h-4 w-4"
+              />
+              High Quality (Segmind)
+            </label>
+          </div>
+
+          <div
+            ref={messageListRef}
+            className="flex flex-col gap-4 border border-yellow-400 p-4 rounded-2xl flex-grow overflow-y-auto bg-black bg-opacity-50"
+            aria-live="polite"
           >
-            Clear Chat 🗑️
-          </button>
-          <label className="flex items-center gap-2 text-sm text-gray-300">
+            {messages.map((msg, i) => (
+              <React.Fragment key={i}>{msg}</React.Fragment>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 items-center mt-4">
             <input
-              type="checkbox"
-              checked={useHighQuality}
-              onChange={() => setUseHighQuality((v) => !v)}
-              className="h-4 w-4"
+              type="text"
+              className="flex-1 px-4 py-3 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              placeholder="Ask something..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              disabled={loading}
             />
-            High Quality (Segmind)
-          </label>
-        </div>
-
-        <div
-          ref={messageListRef}
-          className="flex flex-col gap-4 border border-yellow-400 p-4 rounded-2xl h-[500px] overflow-y-auto bg-black bg-opacity-50 w-full max-w-2xl"
-          aria-live="polite"
-        >
-          {messages.map((msg, i) => (
-            <React.Fragment key={i}>{msg}</React.Fragment>
-          ))}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 items-center w-full max-w-2xl mt-4">
-          <input
-            type="text"
-            className="flex-1 px-4 py-2 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            placeholder="Ask something..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={loading}
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading}
-            className={`px-4 py-2 rounded-2xl text-black font-bold transition duration-300 ${
-              loading ? "bg-gray-400" : "bg-yellow-400 hover:bg-yellow-500"
-            }`}
-          >
-            {loading ? "Sending…" : "Send"}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={loading}
-            className="px-4 py-2 bg-cyan-400 text-black rounded-2xl font-bold hover:bg-cyan-500 transition duration-300"
-          >
-            📎
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFile}
-            className="hidden"
-            accept="image/*"
-            disabled={loading}
-          />
-        </div>
+            <button
+              onClick={handleSend}
+              disabled={loading}
+              className={`px-4 py-3 rounded-2xl text-black font-bold transition duration-300 ${
+                loading ? "bg-gray-400" : "bg-yellow-400 hover:bg-yellow-500"
+              }`}
+            >
+              {loading ? "Sending…" : "Send"}
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="px-4 py-3 bg-cyan-400 text-black rounded-2xl font-bold hover:bg-cyan-500 transition duration-300"
+            >
+              📎
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFile}
+              className="hidden"
+              accept="image/*"
+              disabled={loading}
+            />
+          </div>
+        </main>
       </div>
     </>
   );
