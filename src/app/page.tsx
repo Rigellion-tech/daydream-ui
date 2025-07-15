@@ -58,15 +58,6 @@ export default function LoginPage() {
       throw new Error(data.error || "Verification failed");
     }
 
-    // Save user_id cookie
-    Cookies.set("user_id", data.user_id, {
-      path: "/",
-      expires: 365,
-      sameSite: "Lax",
-    });
-
-    // 🔥 PATCH START - Save user name, email, and avatar
-
     // Derive user name from email before '@'
     const userName = email.split("@")[0] || "User";
 
@@ -74,25 +65,20 @@ export default function LoginPage() {
     const avatarUrl =
       "https://res.cloudinary.com/demo/image/upload/v1700000000/avatar_placeholder.png";
 
-    Cookies.set("user_name", userName, {
-      path: "/",
-      expires: 365,
-      sameSite: "Lax",
-    });
+    // ✅ Declare cookie options properly
+    const cookieOptions = {
+      expires: 365,       // persistent cookie
+      path: "/",          // entire site
+      sameSite: "Lax",    // protects against CSRF
+      secure: true        // HTTPS only
+      // domain: ".yourdomain.com" // optionally set your domain for Vercel
+    };
 
-    Cookies.set("user_email", email, {
-      path: "/",
-      expires: 365,
-      sameSite: "Lax",
-    });
-
-    Cookies.set("user_avatar", avatarUrl, {
-      path: "/",
-      expires: 365,
-      sameSite: "Lax",
-    });
-
-    // 🔥 PATCH END
+    // ✅ Save cookies
+    Cookies.set("user_id", data.user_id, cookieOptions);
+    Cookies.set("user_name", userName, cookieOptions);
+    Cookies.set("user_email", email, cookieOptions);
+    Cookies.set("user_avatar", avatarUrl, cookieOptions);
 
     return data;
   }
@@ -119,7 +105,7 @@ export default function LoginPage() {
     try {
       const res = await verifyCode(email, code);
       setMessage(`Logged in as ${res.user_id}`);
-      router.push("/chat"); // ✅ PATCH: go to /chat
+      router.push("/chat");
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred.";
