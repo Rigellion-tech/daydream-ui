@@ -1,9 +1,6 @@
-"use client";
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import AuthLayout from "./AuthLayout";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -61,18 +58,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const router = useRouter();
-
-  useEffect(() => {
-    const cookies = document.cookie.split("; ");
-    const loggedIn = cookies.some((c) => c.startsWith("user_id="));
-
-    // Only redirect from login page ("/") to avoid loops
-    if (loggedIn && window.location.pathname === "/") {
-      router.push("/chat");
-    }
-  }, []);
-
   return (
     <html lang="en">
       <head>
@@ -89,7 +74,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AuthLayout>{children}</AuthLayout>
       </body>
     </html>
   );
