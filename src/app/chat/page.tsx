@@ -104,7 +104,7 @@ export default function Home() {
         setRawMessages(raw);
       }
     })();
-  }, [user_id.current, renderMessage]);
+  }, [renderMessage]);
 
   useEffect(() => {
     if (!rawMessages.length || !user_id.current) return;
@@ -116,7 +116,7 @@ export default function Home() {
         body: JSON.stringify({ user_id: user_id.current, messages: rawMessages }),
       });
     })().catch(console.error);
-  }, [rawMessages, user_id.current]);
+  }, [rawMessages]);
 
   useEffect(() => {
     const el = messageListRef.current;
@@ -179,7 +179,7 @@ export default function Home() {
     return data.response as string;
   };
 
-  const generateImagePatched = async (prompt: string, highQuality = false) => {
+  const generateImagePatched = async (prompt: string) => {
     if (!user_id.current) throw new Error("Missing user ID");
 
     const res = await fetch("https://daydreamforge.onrender.com/image", {
@@ -212,7 +212,7 @@ export default function Home() {
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
-      const url = await generateImagePatched(promptText, false);
+      const url = await generateImagePatched(promptText);
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: "✅ Here's your dream image:",
@@ -359,7 +359,6 @@ export default function Home() {
     }).catch(console.error);
   };
 
-  
   return (
     <>
       <Head>
