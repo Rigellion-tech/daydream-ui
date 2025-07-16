@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
 
 interface RequestCodeResponse {
   status: string;
@@ -10,18 +9,10 @@ interface RequestCodeResponse {
 }
 
 interface VerifyCodeResponse {
+  success: boolean;
   user_id: string;
   error?: string;
 }
-
-// ✅ Define CookieAttributes type manually
-type CookieAttributes = {
-  expires?: number | Date;
-  path?: string;
-  domain?: string;
-  secure?: boolean;
-  sameSite?: "lax" | "strict" | "none";
-};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +30,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
+        credentials: "include", // ✅ Ensure cookies are included in requests
       }
     );
 
@@ -59,6 +51,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
+        credentials: "include", // ✅ Send and receive cookies
       }
     );
 
@@ -66,26 +59,6 @@ export default function LoginPage() {
     if (!res.ok) {
       throw new Error(data.error || "Verification failed");
     }
-
-    // Derive user name from email before '@'
-    const userName = email.split("@")[0] || "User";
-
-    // Fallback avatar image (replace with your real avatar logic!)
-    const avatarUrl =
-      "https://res.cloudinary.com/demo/image/upload/v1700000000/avatar_placeholder.png";
-
-    // ✅ Define cookie options with correct typing
-    const cookieOptions: CookieAttributes = {
-      expires: 365,
-      path: "/",
-      sameSite: "lax",   // lowercase required
-      secure: true,
-    };
-
-    Cookies.set("user_id", data.user_id, cookieOptions);
-    Cookies.set("user_name", userName, cookieOptions);
-    Cookies.set("user_email", email, cookieOptions);
-    Cookies.set("user_avatar", avatarUrl, cookieOptions);
 
     return data;
   }
