@@ -26,6 +26,8 @@ export default function Home() {
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef<string | null>(null);
 
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+
   useEffect(() => {
     const id = Cookies.get("user_id");
     if (id) {
@@ -91,7 +93,7 @@ export default function Home() {
 
     (async () => {
       const res = await fetch(
-        `https://daydreamforge.onrender.com/memory?user_id=${user_id.current}`,
+        `${apiBase}/memory?user_id=${user_id.current}`,
         {
           credentials: "include",
         }
@@ -104,19 +106,19 @@ export default function Home() {
         setRawMessages(raw);
       }
     })();
-  }, [renderMessage]);
+  }, [renderMessage, apiBase]);
 
   useEffect(() => {
     if (!rawMessages.length || !user_id.current) return;
     (async () => {
-      await fetch("https://daydreamforge.onrender.com/memory", {
+      await fetch(`${apiBase}/memory`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ user_id: user_id.current, messages: rawMessages }),
       });
     })().catch(console.error);
-  }, [rawMessages]);
+  }, [rawMessages, apiBase]);
 
   useEffect(() => {
     const el = messageListRef.current;
@@ -163,7 +165,7 @@ export default function Home() {
   ) => {
     if (!user_id.current) throw new Error("Missing user ID");
 
-    const res = await fetch("https://daydreamforge.onrender.com/chat", {
+    const res = await fetch(`${apiBase}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -182,7 +184,7 @@ export default function Home() {
   const generateImagePatched = async (prompt: string) => {
     if (!user_id.current) throw new Error("Missing user ID");
 
-    const res = await fetch("https://daydreamforge.onrender.com/image", {
+    const res = await fetch(`${apiBase}/image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -351,7 +353,7 @@ export default function Home() {
     setMessages([]);
     setRawMessages([]);
     if (!user_id.current) return;
-    fetch("https://daydreamforge.onrender.com/memory", {
+    fetch(`${apiBase}/memory`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

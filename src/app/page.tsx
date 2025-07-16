@@ -23,17 +23,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  // ✅ Use env variable, fallback to prod
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+
   async function requestCode(email: string): Promise<RequestCodeResponse> {
     try {
-      const res = await fetch(
-        "https://daydreamforge.onrender.com/auth/request_code",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`${apiBase}/auth/request_code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
 
       const data: RequestCodeResponse = await res.json();
 
@@ -53,15 +54,12 @@ export default function LoginPage() {
     code: string
   ): Promise<VerifyCodeResponse> {
     try {
-      const res = await fetch(
-        "https://daydreamforge.onrender.com/auth/verify_code",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, code }),
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`${apiBase}/auth/verify_code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+        credentials: "include",
+      });
 
       const data: VerifyCodeResponse = await res.json();
 

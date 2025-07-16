@@ -23,6 +23,10 @@ interface ImageResponse {
   error?: string;
 }
 
+// ✅ NEW: Grab base API URL from env
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+
 // --- Helper to manage or generate a persistent user ID ---
 export function getUserId(): string {
   if (typeof window === "undefined") return "user-temp";
@@ -47,15 +51,15 @@ export async function sendMessageToBackend(
   if (imageUrl) payload.image_url = imageUrl;
 
   try {
-    const res = await fetch(
-      "https://daydreamforge.onrender.com/chat",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✅ ensure cookies sent
+      body: JSON.stringify(payload),
+    });
+
     const data = (await res.json()) as ChatResponse;
+
     if (!res.ok || data.error) {
       console.error(`Chat API error: ${data.error || res.status}`);
       return data.error ?? "";
@@ -76,19 +80,19 @@ export async function generateImage(
 ): Promise<string> {
   const user_id = getUserId();
   try {
-    const res = await fetch(
-      "https://daydreamforge.onrender.com/image",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          useHighQuality: highQuality,
-          user_id,
-        }),
-      }
-    );
+    const res = await fetch(`${API_BASE}/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✅ ensure cookies sent
+      body: JSON.stringify({
+        prompt,
+        useHighQuality: highQuality,
+        user_id,
+      }),
+    });
+
     const data = (await res.json()) as ImageResponse;
+
     if (!res.ok || data.error || !data.imageUrl) {
       console.error(`Image API error: ${data.error || res.status}`);
       return "";
@@ -108,15 +112,15 @@ export async function isImageRequest(message: string): Promise<boolean> {
   const classifierPrompt =
     `You are a classifier. Answer ONLY 'yes' or 'no'.\n` +
     `Is the following user message asking to generate an image?\n"${message}"\nAnswer:`;
+
   try {
-    const res = await fetch(
-      "https://daydreamforge.onrender.com/chat",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: classifierPrompt, user_id }),
-      }
-    );
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✅ ensure cookies sent
+      body: JSON.stringify({ message: classifierPrompt, user_id }),
+    });
+
     const data = (await res.json()) as ChatResponse;
     const answer = data.response?.trim() ?? "";
     return /^yes/i.test(answer);
