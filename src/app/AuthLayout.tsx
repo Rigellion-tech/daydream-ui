@@ -23,10 +23,13 @@ export default function AuthLayout({
 
     const userId = cookies["user_id"] || null;
 
-    // ✅ Handle redirect to www if user lands on naked domain
+    console.log("Cookies in AuthLayout:", cookies);
+    console.log("Detected userId:", userId);
+
+    // Redirect naked domain → www
     if (
       window.location.hostname === "daydreamforge.com" &&
-      process.env.NODE_ENV === "production"
+      window.location.protocol === "https:"
     ) {
       const url = new URL(window.location.href);
       url.hostname = "www.daydreamforge.com";
@@ -34,9 +37,16 @@ export default function AuthLayout({
       return;
     }
 
-    // ✅ Only redirect if user is logged in and on the root page
+    // Redirect logged-in users away from login page
     if (userId && window.location.pathname === "/") {
       router.replace("/chat");
+      return;
+    }
+
+    // Redirect non-logged-in users away from protected pages
+    if (!userId && window.location.pathname.startsWith("/chat")) {
+      router.replace("/");
+      return;
     }
   }, [router]);
 
