@@ -1,5 +1,9 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,13 +61,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const cookies = document.cookie.split("; ");
+    const loggedIn = cookies.some((c) => c.startsWith("user_id="));
+
+    // Only redirect from login page ("/") to avoid loops
+    if (loggedIn && window.location.pathname === "/") {
+      router.push("/chat");
+    }
+  }, []);
+
   return (
     <html lang="en">
       <head>
         <meta name="robots" content="index, follow" />
         <meta name="theme-color" content="#00ffff" />
         <link rel="icon" href="/favicon-new.png" type="image/png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
+        />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body
