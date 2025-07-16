@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface RequestCodeResponse {
-  status: string;
+  success?: boolean;
   error?: string;
 }
 
@@ -24,43 +24,56 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
 
   async function requestCode(email: string): Promise<RequestCodeResponse> {
-    const res = await fetch(
-      "https://daydreamforge.onrender.com/auth/request_code",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        credentials: "include", // ✅ Ensure cookies are included in requests
-      }
-    );
+    try {
+      const res = await fetch(
+        "https://daydreamforge.onrender.com/auth/request_code",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+          credentials: "include",
+        }
+      );
 
-    const data: RequestCodeResponse = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to send code");
+      const data: RequestCodeResponse = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send code.");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Request code failed:", error);
+      throw new Error("Failed to fetch. Please check your connection.");
     }
-    return data;
   }
 
   async function verifyCode(
     email: string,
     code: string
   ): Promise<VerifyCodeResponse> {
-    const res = await fetch(
-      "https://daydreamforge.onrender.com/auth/verify_code",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-        credentials: "include", // ✅ Send and receive cookies
+    try {
+      const res = await fetch(
+        "https://daydreamforge.onrender.com/auth/verify_code",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code }),
+          credentials: "include",
+        }
+      );
+
+      const data: VerifyCodeResponse = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Verification failed.");
       }
-    );
 
-    const data: VerifyCodeResponse = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Verification failed");
+      return data;
+    } catch (error) {
+      console.error("Verify code failed:", error);
+      throw new Error("Failed to fetch. Please check your connection.");
     }
-
-    return data;
   }
 
   const handleSendCode = async () => {
@@ -148,7 +161,11 @@ export default function LoginPage() {
           </>
         )}
 
-        {message && <p className="mt-4 text-red-400 text-center">{message}</p>}
+        {message && (
+          <p className="mt-4 text-red-400 text-center whitespace-pre-wrap">
+            {message}
+          </p>
+        )}
       </div>
     </div>
   );
