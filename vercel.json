@@ -1,16 +1,15 @@
 {
     "version": 2,
-    "trailingSlash": false,
     "redirects": [
       {
-        "source": "/(.*)",
+        "source": "/:path*",
         "has": [
           {
             "type": "host",
             "value": "daydreamforge.com"
           }
         ],
-        "destination": "https://www.daydreamforge.com/$1",
+        "destination": "https://www.daydreamforge.com/:path*",
         "permanent": true
       }
     ]
