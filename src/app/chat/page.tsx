@@ -3,36 +3,27 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Head from "next/head";
 import NextImage from "next/image";
-import {
-  generateImage,
-  sendMessageToBackend,
-  isImageRequest,
-  ChatMessage,
-} from "@/lib/api";
-import React, { ReactElement } from "react";
-import ReactMarkdown from "react-markdown";
 import Cookies from "js-cookie";
 import Link from "next/link";
+import React, { ReactElement } from "react";
+import ReactMarkdown from "react-markdown";
+
+import { isImageRequest, ChatMessage } from "@/lib/api";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(
-    undefined
-  );
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
 
   const [userName, setUserName] = useState<string>("User");
   const [userEmail, setUserEmail] = useState<string>("user@example.com");
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string>(
-    "/avatar.png"
-  );
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/avatar.png");
   const [showMenu, setShowMenu] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
-
   const user_id = useRef<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +55,6 @@ export default function Home() {
     (msg: ChatMessage, key: number) => {
       const baseClasses =
         "whitespace-pre-wrap p-4 rounded-2xl shadow-md max-w-[80%] transition duration-300 ease-in-out transform hover:scale-[1.02]";
-
       const userClasses =
         "self-end bg-gradient-to-r from-cyan-400 to-cyan-600 text-black font-bold";
       const assistantClasses =
@@ -101,7 +91,10 @@ export default function Home() {
 
     (async () => {
       const res = await fetch(
-        `https://daydreamforge.onrender.com/memory?user_id=${user_id.current}`
+        `https://daydreamforge.onrender.com/memory?user_id=${user_id.current}`,
+        {
+          credentials: "include",
+        }
       );
       const data = await res.json();
       if (data.messages) {
@@ -119,6 +112,7 @@ export default function Home() {
       await fetch("https://daydreamforge.onrender.com/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ user_id: user_id.current, messages: rawMessages }),
       });
     })().catch(console.error);
@@ -152,14 +146,55 @@ export default function Home() {
 
   const removeTypingBubble = () => {
     setMessages((prev) =>
-      prev.filter((msg) => {
-        return !(
-          React.isValidElement(msg) &&
-          typeof msg.key === "string" &&
-          msg.key.startsWith("typing-")
-        );
-      })
+      prev.filter(
+        (msg) =>
+          !(
+            React.isValidElement(msg) &&
+            typeof msg.key === "string" &&
+            msg.key.startsWith("typing-")
+          )
+      )
     );
+  };
+
+  const sendMessageToBackendPatched = async (
+    message: string,
+    imageUrl?: string
+  ) => {
+    if (!user_id.current) throw new Error("Missing user ID");
+
+    const res = await fetch("https://daydreamforge.onrender.com/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        user_id: user_id.current,
+        message,
+        image_url: imageUrl,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data.response as string;
+  };
+
+  const generateImagePatched = async (prompt: string, highQuality = false) => {
+    if (!user_id.current) throw new Error("Missing user ID");
+
+    const res = await fetch("https://daydreamforge.onrender.com/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        prompt,
+        user_id: user_id.current,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data.imageUrl as string;
   };
 
   const handleSend = async () => {
@@ -177,7 +212,7 @@ export default function Home() {
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
-      const url = await generateImage(promptText, false);
+      const url = await generateImagePatched(promptText, false);
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: "✅ Here's your dream image:",
@@ -200,7 +235,7 @@ export default function Home() {
       setLoading(false);
     } else {
       try {
-        const fullReply = await sendMessageToBackend(input, currentImageUrl);
+        const fullReply = await sendMessageToBackendPatched(input, currentImageUrl);
         const assistantMsg: ChatMessage = {
           role: "assistant",
           content: fullReply,
@@ -280,7 +315,7 @@ export default function Home() {
       addTypingBubble();
 
       try {
-        const reply = await sendMessageToBackend("", secure_url);
+        const reply = await sendMessageToBackendPatched("", secure_url);
         const assistantMsg: ChatMessage = {
           role: "assistant",
           content: reply,
@@ -319,10 +354,12 @@ export default function Home() {
     fetch("https://daydreamforge.onrender.com/memory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ user_id: user_id.current, messages: [] }),
     }).catch(console.error);
   };
 
+  
   return (
     <>
       <Head>
