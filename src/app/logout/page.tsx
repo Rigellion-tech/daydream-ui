@@ -35,6 +35,9 @@ export default function LogoutPage() {
       localStorage.clear();
       sessionStorage.clear();
 
+      // Wait briefly to avoid auth race with AuthLayout
+      await new Promise((res) => setTimeout(res, 300));
+
       // Redirect to login
       router.push("/");
     }

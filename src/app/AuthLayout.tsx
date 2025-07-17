@@ -31,17 +31,20 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     }
 
     const isAuthPage = ["/", "/login", "/register"].includes(path);
+    const isLogoutPage = path === "/logout";
 
-    if (userId && isAuthPage) {
-      console.log("Redirecting logged-in user to /chat");
-      router.replace("/chat");
-      return;
-    }
+    if (!isLogoutPage) {
+      if (userId && isAuthPage) {
+        console.log("Redirecting logged-in user to /chat");
+        router.replace("/chat");
+        return;
+      }
 
-    if (!userId && path.startsWith("/chat")) {
-      console.log("Redirecting guest user to login page");
-      router.replace("/");
-      return;
+      if (!userId && path.startsWith("/chat")) {
+        console.log("Redirecting guest user to login page");
+        router.replace("/");
+        return;
+      }
     }
 
     setAuthChecked(true);
