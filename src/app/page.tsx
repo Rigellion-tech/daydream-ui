@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 interface RequestCodeResponse {
   success?: boolean;
@@ -23,25 +24,22 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ✅ Use env variable, fallback to prod
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+  // Use env variable, fallback to prod
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
 
   async function requestCode(email: string): Promise<RequestCodeResponse> {
     try {
       const res = await fetch(`${apiBase}/auth/request_code`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
-        credentials: "include",
       });
-
       const data: RequestCodeResponse = await res.json();
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to send code.");
       }
-
       return data;
     } catch (error) {
       console.error("Request code failed:", error);
@@ -56,17 +54,15 @@ export default function LoginPage() {
     try {
       const res = await fetch(`${apiBase}/auth/verify_code`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
-        credentials: "include",
       });
-
       const data: VerifyCodeResponse = await res.json();
 
       if (!res.ok) {
         throw new Error(data.error || "Verification failed.");
       }
-
       return data;
     } catch (error) {
       console.error("Verify code failed:", error);
@@ -95,6 +91,8 @@ export default function LoginPage() {
     setMessage("");
     try {
       const res = await verifyCode(email, code);
+      // Store the user_id in a client-readable cookie
+      Cookies.set("user_id", res.user_id, { path: "/" });
       setMessage(`Logged in as ${res.user_id}`);
       router.push("/chat");
     } catch (err) {

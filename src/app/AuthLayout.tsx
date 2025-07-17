@@ -1,29 +1,16 @@
+// AuthLayout.tsx
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const cookies = document.cookie
-      .split("; ")
-      .reduce((acc: Record<string, string>, pair) => {
-        const [key, value] = pair.split("=");
-        if (key && value) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
+    const userId = Cookies.get("user_id") || null;
 
-    const userId = cookies["user_id"] || null;
-
-    console.log("Cookies in AuthLayout:", cookies);
     console.log("Detected userId:", userId);
     console.log("Current hostname:", window.location.hostname);
     console.log("Current pathname:", window.location.pathname);
