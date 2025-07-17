@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 
@@ -24,8 +24,30 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Use env variable, fallback to prod
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+
+  // ─── Ensure user_id fallback ─────────────────────────────
+  useEffect(() => {
+    const existing = localStorage.getItem("user_id");
+    if (!existing) {
+      const generated = `user-${Math.random().toString(36).substring(2, 10)}`;
+      localStorage.setItem("user_id", generated);
+      console.info("Generated user_id:", generated);
+    } else {
+      console.info("Detected user_id:", existing);
+    }
+  }, []);
+
+  // ─── Robust JSON fetcher ────────────────────────────────
+  async function safeJsonParse(res: Response) {
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.warn("Non-JSON response received:", text);
+      return {};
+    }
+  }
 
   async function requestCode(email: string): Promise<RequestCodeResponse> {
     try {
@@ -35,11 +57,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data: RequestCodeResponse = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to send code.");
-      }
+      const data: RequestCodeResponse = await safeJsonParse(res);
+      if (!res.ok) throw new Error(data.error || "Failed to send code.");
       return data;
     } catch (error) {
       console.error("Request code failed:", error);
@@ -47,10 +67,7 @@ export default function LoginPage() {
     }
   }
 
-  async function verifyCode(
-    email: string,
-    code: string
-  ): Promise<VerifyCodeResponse> {
+  async function verifyCode(email: string, code: string): Promise<VerifyCodeResponse> {
     try {
       const res = await fetch(`${apiBase}/auth/verify_code`, {
         method: "POST",
@@ -58,11 +75,9 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
       });
-      const data: VerifyCodeResponse = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Verification failed.");
-      }
+      const data: VerifyCodeResponse = await safeJsonParse(res);
+      if (!res.ok) throw new Error(data.error || "Verification failed.");
       return data;
     } catch (error) {
       console.error("Verify code failed:", error);
@@ -78,8 +93,7 @@ export default function LoginPage() {
       setMessage("Check your email for the login code!");
       setStep("code");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred.";
+      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
       setMessage(errorMessage);
     } finally {
       setLoading(false);
@@ -91,13 +105,12 @@ export default function LoginPage() {
     setMessage("");
     try {
       const res = await verifyCode(email, code);
-      // Store the user_id in a client-readable cookie
       Cookies.set("user_id", res.user_id, { path: "/" });
+      localStorage.setItem("user_id", res.user_id);
       setMessage(`Logged in as ${res.user_id}`);
       router.push("/chat");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred.";
+      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
       setMessage(errorMessage);
     } finally {
       setLoading(false);
@@ -109,9 +122,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-gray-800 rounded-lg p-6">
         {step === "email" && (
           <>
-            <h2 className="text-3xl mb-4 text-cyan-400 font-extrabold">
-              Sign in to DayDream Forge
-            </h2>
+            <h2 className="text-3xl mb-4 text-cyan-400 font-extrabold">Sign in to DayDream Forge</h2>
             <input
               type="email"
               placeholder="you@email.com"
@@ -131,9 +142,7 @@ export default function LoginPage() {
 
         {step === "code" && (
           <>
-            <h2 className="text-3xl mb-4 text-yellow-400 font-extrabold">
-              Enter Your Code
-            </h2>
+            <h2 className="text-3xl mb-4 text-yellow-400 font-extrabold">Enter Your Code</h2>
             <input
               type="text"
               placeholder="6-digit code"
@@ -158,9 +167,7 @@ export default function LoginPage() {
         )}
 
         {message && (
-          <p className="mt-4 text-red-400 text-center whitespace-pre-wrap">
-            {message}
-          </p>
+          <p className="mt-4 text-red-400 text-center whitespace-pre-wrap">{message}</p>
         )}
       </div>
     </div>

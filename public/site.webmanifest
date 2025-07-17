@@ -1,0 +1,23 @@
+{
+    "name": "DayDream Forge",
+    "short_name": "DayDream",
+    "description": "DayDream Forge — your AI-powered transformation coach.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#00ffff",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": "/favicon-new.png?v=2",
+        "sizes": "512x512",
+        "type": "image/png"
+      },
+      {
+        "src": "/apple-touch-icon.png?v=2",
+        "sizes": "180x180",
+        "type": "image/png"
+      }
+    ]
+  }
+  

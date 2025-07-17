@@ -6,40 +6,41 @@ import { useRouter } from "next/navigation";
 
 export default function LogoutPage() {
   const router = useRouter();
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
 
   useEffect(() => {
     async function logout() {
       try {
-        // ✅ Call backend logout to clear the HttpOnly cookie
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com"}/auth/logout`,
-          {
-            method: "POST",
-            credentials: "include",
+        const res = await fetch(`${apiBase}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
           }
-        );
+        });
 
         if (!res.ok) {
-          console.error("Logout backend request failed:", res.status);
+          console.warn(`Logout failed with status: ${res.status}`);
+        } else {
+          console.log("Logout successful.");
         }
       } catch (err) {
         console.error("Logout fetch error:", err);
       }
 
-      // ✅ Remove frontend cookies
-      Cookies.remove("user_id");
-      Cookies.remove("user_name");
-      Cookies.remove("user_email");
-      Cookies.remove("user_avatar");
-
+      // Clean up client storage and cookies
+      ["user_id", "user_name", "user_email", "user_avatar"].forEach((key) =>
+        Cookies.remove(key)
+      );
       localStorage.clear();
       sessionStorage.clear();
 
+      // Redirect to login
       router.push("/");
     }
 
     logout();
-  }, [router]);
+  }, [apiBase, router]);
 
   return (
     <div

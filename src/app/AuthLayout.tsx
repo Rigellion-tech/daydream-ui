@@ -1,25 +1,28 @@
 // AuthLayout.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const userId = Cookies.get("user_id") || null;
+    const cookieId = Cookies.get("user_id");
+    const localId = typeof window !== "undefined" ? localStorage.getItem("user_id") : null;
+    const userId = cookieId || localId || null;
+
+    const path = window.location.pathname;
+    const hostname = window.location.hostname;
 
     console.log("Detected userId:", userId);
-    console.log("Current hostname:", window.location.hostname);
-    console.log("Current pathname:", window.location.pathname);
+    console.log("Current hostname:", hostname);
+    console.log("Current pathname:", path);
 
     // Redirect naked domain → www
-    if (
-      window.location.hostname === "daydreamforge.com" &&
-      window.location.protocol === "https:"
-    ) {
+    if (hostname === "daydreamforge.com" && window.location.protocol === "https:") {
       const url = new URL(window.location.href);
       url.hostname = "www.daydreamforge.com";
       console.log("Redirecting to www domain:", url.toString());
@@ -27,20 +30,25 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       return;
     }
 
-    // Redirect logged-in users away from login page
-    if (userId && window.location.pathname === "/") {
+    const isAuthPage = ["/", "/login", "/register"].includes(path);
+
+    if (userId && isAuthPage) {
       console.log("Redirecting logged-in user to /chat");
       router.replace("/chat");
       return;
     }
 
-    // Redirect non-logged-in users away from protected pages
-    if (!userId && window.location.pathname.startsWith("/chat")) {
+    if (!userId && path.startsWith("/chat")) {
       console.log("Redirecting guest user to login page");
       router.replace("/");
       return;
     }
+
+    setAuthChecked(true);
   }, [router]);
+
+  // Prevent flicker during auth check
+  if (!authChecked) return null;
 
   return <>{children}</>;
 }
