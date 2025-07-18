@@ -7,10 +7,13 @@ import Cookies from "js-cookie";
 import Link from "next/link";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
+import { useRouter } from "next/navigation";
 
 import { isImageRequest, ChatMessage } from "@/lib/api";
 
 export default function Home() {
+  const router = useRouter();
+
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
@@ -30,22 +33,20 @@ export default function Home() {
 
   useEffect(() => {
     const id = Cookies.get("user_id");
-    if (id) {
-      user_id.current = id;
+    if (!id) {
+      router.push("/login");
+      return;
     }
 
+    user_id.current = id;
     const name = Cookies.get("user_name");
     const email = Cookies.get("user_email");
     const avatar = Cookies.get("user_avatar");
 
     if (name) setUserName(name);
     if (email) setUserEmail(email);
-    if (avatar) {
-      setUserAvatarUrl(avatar);
-    } else {
-      setUserAvatarUrl("/avatar.png");
-    }
-  }, []);
+    setUserAvatarUrl(avatar || "/avatar.png");
+  }, [router]);
 
   useEffect(() => {
     const handler = () => setShowMenu(false);
@@ -63,17 +64,8 @@ export default function Home() {
         "self-start bg-black text-yellow-300 border-2 border-yellow-400";
 
       return (
-        <div
-          key={key}
-          className={`w-full flex ${
-            msg.role === "user" ? "justify-end" : "justify-start"
-          }`}
-        >
-          <div
-            className={`${baseClasses} ${
-              msg.role === "user" ? userClasses : assistantClasses
-            }`}
-          >
+        <div key={key} className={`w-full flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div className={`${baseClasses} ${msg.role === "user" ? userClasses : assistantClasses}`}>
             {msg.role === "assistant" ? (
               <div className="prose dark:prose-invert max-w-none">
                 <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
@@ -90,14 +82,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!user_id.current) return;
-
     (async () => {
-      const res = await fetch(
-        `${apiBase}/memory?user_id=${user_id.current}`,
-        {
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`${apiBase}/memory?user_id=${user_id.current}`, {
+        credentials: "include",
+      });
       const data = await res.json();
       if (data.messages) {
         const raw: ChatMessage[] = data.messages;
@@ -127,10 +115,11 @@ export default function Home() {
 
   function forceParagraphs(text: string) {
     return text
-      .replace(/([.?!])([^\d.])/g, "$1 $2")
+      .replace(/([.?!])([^\n\d.])/g, "$1 $2")
       .replace(/([.?!])\s+(?=[A-Z])/g, "$1\n\n")
       .replace(/\n{3,}/g, "\n\n");
   }
+  
 
   const addTypingBubble = () => {
     const typingBubble = (
@@ -158,6 +147,7 @@ export default function Home() {
       )
     );
   };
+
 
   const sendMessageToBackendPatched = async (
     message: string,
