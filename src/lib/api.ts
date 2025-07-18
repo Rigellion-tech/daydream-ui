@@ -26,8 +26,7 @@ interface ImageResponse {
 }
 
 // ✅ Grab base API URL from env
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
 
 // --- Improved: Sync cookie/localStorage for user_id ---
 export function getUserId(): string {
