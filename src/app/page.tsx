@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 
   // ─── Log existing user_id for debug ─────────────────────────────
   useEffect(() => {
