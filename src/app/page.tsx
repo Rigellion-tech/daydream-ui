@@ -26,15 +26,11 @@ export default function LoginPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
 
-  // ─── Ensure user_id fallback ─────────────────────────────
+  // ─── Check for existing login ─────────────────────────────
   useEffect(() => {
     const existing = localStorage.getItem("user_id");
-    if (!existing) {
-      const generated = `user-${Math.random().toString(36).substring(2, 10)}`;
-      localStorage.setItem("user_id", generated);
-      console.info("Generated user_id:", generated);
-    } else {
-      console.info("Detected user_id:", existing);
+    if (existing) {
+      router.push("/chat");
     }
   }, []);
 
