@@ -8,7 +8,6 @@ import Link from "next/link";
 import React, { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
-
 import { isImageRequest, ChatMessage } from "@/lib/api";
 
 export default function Home() {
@@ -24,6 +23,7 @@ export default function Home() {
   const [userEmail, setUserEmail] = useState<string>("user@example.com");
   const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/avatar.png");
   const [showMenu, setShowMenu] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true); // 👈 New
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -33,6 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     const id = Cookies.get("user_id");
+
     if (!id) {
       router.push("/login");
       return;
@@ -46,6 +47,8 @@ export default function Home() {
     if (name) setUserName(name);
     if (email) setUserEmail(email);
     setUserAvatarUrl(avatar || "/avatar.png");
+
+    setCheckingAuth(false); // ✅ Done checking
   }, [router]);
 
   useEffect(() => {
@@ -119,7 +122,6 @@ export default function Home() {
       .replace(/([.?!])\s+(?=[A-Z])/g, "$1\n\n")
       .replace(/\n{3,}/g, "\n\n");
   }
-  
 
   const addTypingBubble = () => {
     const typingBubble = (
@@ -148,11 +150,7 @@ export default function Home() {
     );
   };
 
-
-  const sendMessageToBackendPatched = async (
-    message: string,
-    imageUrl?: string
-  ) => {
+  const sendMessageToBackendPatched = async (message: string, imageUrl?: string) => {
     if (!user_id.current) throw new Error("Missing user ID");
 
     const res = await fetch(`${apiBase}/chat`, {
@@ -215,7 +213,7 @@ export default function Home() {
         ...prev,
         renderMessage(assistantMsg, prev.length),
         <NextImage
-          key={`img-${prev.length}`}
+          key={`img-${Date.now()}`}
           unoptimized
           src={url}
           alt="AI Generated"
@@ -294,7 +292,7 @@ export default function Home() {
         ...prev,
         renderMessage(userMsg, prev.length),
         <NextImage
-          key={`upload-${prev.length}`}
+          key={`upload-${Date.now()}`}
           unoptimized
           src={secure_url}
           alt="User upload"
@@ -350,6 +348,14 @@ export default function Home() {
       body: JSON.stringify({ user_id: user_id.current, messages: [] }),
     }).catch(console.error);
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-black text-yellow-300">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <>
