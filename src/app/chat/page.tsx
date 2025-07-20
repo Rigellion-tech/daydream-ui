@@ -86,18 +86,32 @@ export default function Home() {
   useEffect(() => {
     if (!user_id.current) return;
     (async () => {
-      const res = await fetch(`${apiBase}/memory?user_id=${user_id.current}`, {
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.messages) {
+      try {
+        const res = await fetch(`${apiBase}/memory?user_id=${user_id.current}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`Memory fetch failed: ${res.status}`);
+        const data = await res.json();
+        if (data.error || !data.messages) {
+          // Bad user_id, memory not found, or some other issue.
+          Cookies.remove("user_id");
+          localStorage.removeItem("user_id");
+          router.push("/login");
+          return;
+        }
         const raw: ChatMessage[] = data.messages;
         const restored = raw.map((msg, i) => renderMessage(msg, i));
         setMessages(restored);
         setRawMessages(raw);
+      } catch (err) {
+        // Network or parse error
+        Cookies.remove("user_id");
+        localStorage.removeItem("user_id");
+        router.push("/login");
       }
     })();
-  }, [renderMessage, apiBase]);
+  }, [renderMessage, apiBase, router]);
+  
 
   useEffect(() => {
     if (!rawMessages.length || !user_id.current) return;
