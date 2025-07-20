@@ -26,11 +26,16 @@ export default function LoginPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 
-  // ─── Log existing user_id for debug ─────────────────────────────
+  // ─── Auto-redirect if already signed in ──────────────
   useEffect(() => {
-    const existing = localStorage.getItem("user_id");
+    const existing = localStorage.getItem("user_id") || Cookies.get("user_id");
+    if (existing) {
+      router.push("/chat");
+      return;
+    }
+    // Optionally keep your debug line:
     console.info("Login page loaded. Existing user_id:", existing);
-  }, []);
+  }, [router]);
 
   // ─── Robust JSON fetcher ────────────────────────────────
   async function safeJsonParse(res: Response) {
