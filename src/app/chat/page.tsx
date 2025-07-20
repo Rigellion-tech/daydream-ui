@@ -103,7 +103,7 @@ export default function Home() {
         const restored = raw.map((msg, i) => renderMessage(msg, i));
         setMessages(restored);
         setRawMessages(raw);
-      } catch (_err) { // <--- PATCHED HERE!
+      } catch {
         // Network or parse error
         Cookies.remove("user_id");
         localStorage.removeItem("user_id");
