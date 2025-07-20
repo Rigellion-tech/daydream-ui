@@ -8,9 +8,6 @@ const nextConfig = {
       "daydreamforge.com",
     ],
   },
-  env: {
-    NEXT_PUBLIC_API_URL: "https://www.daydreamforge.com",
-  },
   trailingSlash: false, // Optional - remove if you prefer slashes
 };
 
