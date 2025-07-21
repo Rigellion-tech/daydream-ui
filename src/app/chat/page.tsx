@@ -10,6 +10,12 @@ import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
 import { isImageRequest, ChatMessage } from "@/lib/api";
 
+// Add the capitalizeFirst function here
+function capitalizeFirst(str: string) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 export default function Home() {
   const router = useRouter();
 
@@ -42,7 +48,9 @@ export default function Home() {
     user_id.current = id;
     // Extract display name/email from id (which is the email)
     setUserEmail(id);
-    setUserName(id.split("@")[0]);
+
+    // PATCH: Capitalize the first name for the profile card
+    setUserName(capitalizeFirst(id.split("@")[0]));
     // Avatar fallback
     setUserAvatarUrl("/avatar.png");
     setCheckingAuth(false);
@@ -413,6 +421,7 @@ export default function Home() {
                     height={64}
                     className="rounded-full border-2 border-yellow-400 mb-2 object-cover"
                   />
+                  {/* PATCH: Capitalized first name */}
                   <p className="font-bold text-lg">Hi, {userName}!</p>
                   <p className="text-xs text-gray-400">{userEmail}</p>
                 </div>
