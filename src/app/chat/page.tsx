@@ -34,7 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     // Try both cookie and localStorage for backward compatibility
-    let id = Cookies.get("user_id") || (typeof window !== "undefined" && localStorage.getItem("user_id"));
+    const id = Cookies.get("user_id") || (typeof window !== "undefined" && localStorage.getItem("user_id"));
     if (!id) {
       router.push("/login");
       return;
