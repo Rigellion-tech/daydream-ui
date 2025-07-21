@@ -42,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       if (!userId && path.startsWith("/chat")) {
         console.log("Redirecting guest user to login page");
-        router.replace("/");
+        router.replace("/login");
         return;
       }
     }
