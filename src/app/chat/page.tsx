@@ -19,11 +19,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
 
+  // PATCH: Use real user email/name from localStorage or cookies
   const [userName, setUserName] = useState<string>("User");
   const [userEmail, setUserEmail] = useState<string>("user@example.com");
   const [userAvatarUrl, setUserAvatarUrl] = useState<string>("/avatar.png");
   const [showMenu, setShowMenu] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true); // 👈 New
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -32,23 +33,19 @@ export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
 
   useEffect(() => {
-    const id = Cookies.get("user_id");
-
+    // Try both cookie and localStorage for backward compatibility
+    let id = Cookies.get("user_id") || (typeof window !== "undefined" && localStorage.getItem("user_id"));
     if (!id) {
       router.push("/login");
       return;
     }
-
     user_id.current = id;
-    const name = Cookies.get("user_name");
-    const email = Cookies.get("user_email");
-    const avatar = Cookies.get("user_avatar");
-
-    if (name) setUserName(name);
-    if (email) setUserEmail(email);
-    setUserAvatarUrl(avatar || "/avatar.png");
-
-    setCheckingAuth(false); // ✅ Done checking
+    // Extract display name/email from id (which is the email)
+    setUserEmail(id);
+    setUserName(id.split("@")[0]);
+    // Avatar fallback
+    setUserAvatarUrl("/avatar.png");
+    setCheckingAuth(false);
   }, [router]);
 
   useEffect(() => {
@@ -56,7 +53,6 @@ export default function Home() {
     window.addEventListener("click", handler);
     return () => window.removeEventListener("click", handler);
   }, []);
-
   const renderMessage = useCallback(
     (msg: ChatMessage, key: number) => {
       const baseClasses =
