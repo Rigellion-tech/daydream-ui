@@ -189,21 +189,25 @@ export default function Home() {
 
   const generateImagePatched = async (prompt: string) => {
     if (!user_id.current) throw new Error("Missing user ID");
-
-    const res = await fetch(`${apiBase}/image`, {
+  
+    const payload = {
+      prompt,
+      identity_image_url: currentImageUrl || null,
+      user_id: user_id.current,
+    };
+  
+    const res = await fetch(`${apiBase}/generate-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({
-        prompt,
-        user_id: user_id.current,
-      }),
+      body: JSON.stringify(payload),
     });
-
+  
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    return data.imageUrl as string;
+    return data.image_url as string;
   };
+  
 
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;

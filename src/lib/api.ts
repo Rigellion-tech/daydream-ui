@@ -1,5 +1,3 @@
-// src/lib/api.ts
-
 import Cookies from "js-cookie";
 
 // --- Typed interfaces for API requests & responses ---
@@ -90,19 +88,21 @@ export async function sendMessageToBackend(
  */
 export async function generateImage(
   prompt: string,
+  identityImageUrl?: string,
   highQuality = false
 ): Promise<string> {
   const user_id = getUserId();
   const payload = {
     prompt,
-    useHighQuality: highQuality,
+    identity_image_url: identityImageUrl || null,
+    high_quality: highQuality,
     user_id,
   };
 
   console.log("Sending image payload:", payload); // 🪵 Debug
 
   try {
-    const res = await fetch(`${API_BASE}/image`, {
+    const res = await fetch(`${API_BASE}/generate-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -113,7 +113,7 @@ export async function generateImage(
     try {
       data = await res.json();
     } catch (err) {
-      console.error("Failed to parse JSON from /image:", err);
+      console.error("Failed to parse JSON from /generate-image:", err);
       return "";
     }
 
