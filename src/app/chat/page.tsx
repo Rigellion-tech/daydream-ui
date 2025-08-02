@@ -279,9 +279,9 @@ export default function Home() {
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || loading || !user_id.current) return;
+    if (!file || loading) return;
     setLoading(true);
-
+  
     const form = new FormData();
     form.append("file", file);
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
@@ -289,7 +289,7 @@ export default function Home() {
     const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
     form.append("upload_preset", preset);
     if (folder) form.append("folder", folder);
-
+  
     try {
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
@@ -301,63 +301,14 @@ export default function Home() {
         setLoading(false);
         return;
       }
-      const secure_url = data.secure_url;
-      setCurrentImageUrl(secure_url);
-
-      const userMsg: ChatMessage = {
-        role: "user",
-        content: `[sent image: ${secure_url}]`,
-      };
-
-      setRawMessages((prev) => [...prev, userMsg]);
-      setMessages((prev) => [
-        ...prev,
-        renderMessage(userMsg, prev.length),
-        <NextImage
-          key={`upload-${Date.now()}`}
-          unoptimized
-          src={secure_url}
-          alt="User upload"
-          width={256}
-          height={256}
-          className="rounded-xl border-4 border-yellow-300 shadow-lg"
-        />,
-      ]);
-
-      addTypingBubble();
-
-      try {
-        const reply = await sendMessageToBackendPatched("", secure_url);
-        const assistantMsg: ChatMessage = {
-          role: "assistant",
-          content: reply,
-        };
-        removeTypingBubble();
-        setRawMessages((prev) => [...prev, assistantMsg]);
-        setMessages((prev) => [
-          ...prev,
-          renderMessage(assistantMsg, prev.length),
-        ]);
-      } catch (err) {
-        console.error("Chat API error:", err);
-        removeTypingBubble();
-        setMessages((prev) => [
-          ...prev,
-          <div key={prev.length} className="w-full flex justify-start">
-            <div className="self-start text-red-500">
-              Error: {String(err)}
-            </div>
-          </div>,
-        ]);
-      }
+      setCurrentImageUrl(data.secure_url); // ONLY sets preview
     } catch (error) {
       console.error("Upload error:", error);
-      setLoading(false);
     }
-
     e.target.value = "";
     setLoading(false);
   };
+  
 
   const handleClear = () => {
     setMessages([]);
@@ -462,6 +413,24 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 items-center mt-4 px-4 pb-4">
+          {currentImageUrl && (
+            <div className="flex items-center gap-4 px-4 pb-2 pt-2">
+              <NextImage
+                src={currentImageUrl}
+                alt="Preview"
+                width={100}
+                height={100}
+                className="rounded-lg border-2 border-yellow-400 shadow-md"
+              />
+              <button
+                onClick={() => setCurrentImageUrl(undefined)}
+                className="text-red-500 hover:underline text-sm"
+                disabled={loading}
+              >
+                ❌ Remove
+              </button>
+            </div>
+          )}
             <input
               type="text"
               className="flex-1 px-4 py-3 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
