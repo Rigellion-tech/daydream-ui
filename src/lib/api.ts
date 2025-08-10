@@ -1,6 +1,8 @@
 import Cookies from "js-cookie";
 
-const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+const BACKEND_ORIGIN =
+  process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+
 function normalizeImageUrl(raw?: string): string | undefined {
   if (!raw) return undefined;
   if (raw.startsWith("/")) return `${BACKEND_ORIGIN}${raw}`;
@@ -26,13 +28,24 @@ interface ChatResponse {
   error?: string;
 }
 
+// Public shape used by the app
 interface ImageResponse {
   imageUrl?: string;
   error?: string;
 }
 
-// ✅ Grab base API URL from env
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+// Private "wire" shape that covers all server variants
+type WireImageResponse = {
+  image_url?: string;   // snake_case from /generate-image
+  imageUrl?: string;    // camelCase from /chat
+  secure_url?: string;  // Cloudinary
+  url?: string;         // last resort
+  error?: string;
+};
+
+// ✅ Base API URL (default to backend)
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 console.log("API_BASE at build/runtime:", API_BASE);
 
 // --- Improved: Sync cookie/localStorage for user_id ---
@@ -62,7 +75,7 @@ export async function sendMessageToBackend(
   if (message) payload.message = message;
   if (imageUrl) payload.image_url = imageUrl;
 
-  console.log("Sending chat payload:", payload); // 🪵 Debug
+  console.log("Sending chat payload:", payload);
 
   try {
     const res = await fetch(`${API_BASE}/chat`, {
@@ -107,7 +120,7 @@ export async function generateImage(
     user_id,
   };
 
-  console.log("Sending image payload:", payload); // 🪵 Debug
+  console.log("Sending image payload:", payload);
 
   try {
     const res = await fetch(`${API_BASE}/generate-image`, {
@@ -117,19 +130,16 @@ export async function generateImage(
       body: JSON.stringify(payload),
     });
 
-    let data: ImageResponse;
-    try {
-      data = await res.json();
-    } catch (err) {
-      console.error("Failed to parse JSON from /generate-image:", err);
-      return "";
-    }
+    const data = (await res.json()) as WireImageResponse;
 
     if (!res.ok || data.error) {
       console.error(`Image API error: ${data.error || res.status}`);
       return "";
     }
-    const rawUrl = data.image_url ?? data.imageUrl ?? data.secure_url ?? data.url;
+
+    const rawUrl =
+      data.image_url ?? data.imageUrl ?? data.secure_url ?? data.url ?? undefined;
+
     const url = normalizeImageUrl(rawUrl);
     return url || "";
   } catch (err) {
@@ -148,7 +158,7 @@ export async function isImageRequest(message: string): Promise<boolean> {
     `Is the following user message asking to generate an image?\n"${message}"\nAnswer:`;
 
   const payload = { message: classifierPrompt, user_id };
-  console.log("Sending isImageRequest payload:", payload); // 🪵 Debug
+  console.log("Sending isImageRequest payload:", payload);
 
   try {
     const res = await fetch(`${API_BASE}/chat`, {
