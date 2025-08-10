@@ -10,12 +10,13 @@ import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
 import { isImageRequest, ChatMessage } from "@/lib/api";
 
-const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+const BACKEND_ORIGIN =
+  process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 
 function normalizeImageUrl(raw?: string): string | undefined {
   if (!raw) return undefined;
-  if (raw.startsWith("/")) return `${BACKEND_ORIGIN}${raw}`;
-  if (raw.startsWith("http://")) return raw.replace("http://", "https://");
+  if (raw.startsWith("/")) return `${BACKEND_ORIGIN}${raw}`; // relative -> absolute
+  if (raw.startsWith("http://")) return raw.replace("http://", "https://"); // force https
   return raw;
 }
 
@@ -32,7 +33,9 @@ export default function Home() {
   const [messages, setMessages] = useState<ReactElement[]>([]);
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(undefined);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(
+    undefined
+  );
 
   // PATCH: Use real user email/name from localStorage or cookies
   const [userName, setUserName] = useState<string>("User");
@@ -45,11 +48,14 @@ export default function Home() {
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef<string | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 
   useEffect(() => {
     // Try both cookie and localStorage for backward compatibility
-    const id = Cookies.get("user_id") || (typeof window !== "undefined" && localStorage.getItem("user_id"));
+    const id =
+      Cookies.get("user_id") ||
+      (typeof window !== "undefined" && localStorage.getItem("user_id"));
     if (!id) {
       router.push("/login");
       return;
@@ -70,31 +76,36 @@ export default function Home() {
     window.addEventListener("click", handler);
     return () => window.removeEventListener("click", handler);
   }, []);
-  const renderMessage = useCallback(
-    (msg: ChatMessage, key: number) => {
-      const baseClasses =
-        "whitespace-pre-wrap p-4 rounded-2xl shadow-md max-w-[80%] transition duration-300 ease-in-out transform hover:scale-[1.02]";
-      const userClasses =
-        "self-end bg-gradient-to-r from-cyan-400 to-cyan-600 text-black font-bold";
-      const assistantClasses =
-        "self-start bg-black text-yellow-300 border-2 border-yellow-400";
 
-      return (
-        <div key={key} className={`w-full flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-          <div className={`${baseClasses} ${msg.role === "user" ? userClasses : assistantClasses}`}>
-            {msg.role === "assistant" ? (
-              <div className="prose dark:prose-invert max-w-none">
-                <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
-              </div>
-            ) : (
-              `🧑: ${msg.content}`
-            )}
-          </div>
+  const renderMessage = useCallback((msg: ChatMessage, key: number) => {
+    const baseClasses =
+      "whitespace-pre-wrap p-4 rounded-2xl shadow-md max-w-[80%] transition duration-300 ease-in-out transform hover:scale-[1.02]";
+    const userClasses =
+      "self-end bg-gradient-to-r from-cyan-400 to-cyan-600 text-black font-bold";
+    const assistantClasses =
+      "self-start bg-black text-yellow-300 border-2 border-yellow-400";
+
+    return (
+      <div
+        key={key}
+        className={`w-full flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className={`${baseClasses} ${
+            msg.role === "user" ? userClasses : assistantClasses
+          }`}
+        >
+          {msg.role === "assistant" ? (
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>{forceParagraphs(msg.content || "")}</ReactMarkdown>
+            </div>
+          ) : (
+            `🧑: ${msg.content}`
+          )}
         </div>
-      );
-    },
-    []
-  );
+      </div>
+    );
+  }, []);
 
   useEffect(() => {
     if (!user_id.current) return;
@@ -124,7 +135,6 @@ export default function Home() {
       }
     })();
   }, [renderMessage, apiBase, router]);
-  
 
   useEffect(() => {
     if (!rawMessages.length || !user_id.current) return;
@@ -177,7 +187,10 @@ export default function Home() {
     );
   };
 
-  const sendMessageToBackendPatched = async (message: string, imageUrl?: string) => {
+  const sendMessageToBackendPatched = async (
+    message: string,
+    imageUrl?: string
+  ) => {
     if (!user_id.current) throw new Error("Missing user ID");
 
     const res = await fetch(`${apiBase}/chat`, {
@@ -198,25 +211,31 @@ export default function Home() {
 
   const generateImagePatched = async (prompt: string) => {
     if (!user_id.current) throw new Error("Missing user ID");
-  
+
     const payload = {
       prompt,
       identity_image_url: currentImageUrl || null,
       user_id: user_id.current,
     };
-  
+
     const res = await fetch(`${apiBase}/generate-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify(payload),
     });
-  
+
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    return data.image_url as string;
+
+    // NEW: accept multiple shapes and normalize to a safe, absolute https URL
+    const rawUrl: string | undefined =
+      data.image_url ?? data.imageUrl ?? data.secure_url ?? data.url ?? undefined;
+
+    const safeUrl = normalizeImageUrl(rawUrl);
+    if (!safeUrl) throw new Error("No valid image URL returned");
+    return safeUrl;
   };
-  
 
   const handleSend = async () => {
     if ((!input.trim() && !currentImageUrl) || loading) return;
@@ -233,7 +252,7 @@ export default function Home() {
     const wantsImage = await isImageRequest(input);
     if (wantsImage) {
       const promptText = input.trim().replace(/^\/image\s+/i, "");
-      const url = await generateImagePatched(promptText);
+      const url = await generateImagePatched(promptText); // now normalized
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: "✅ Here's your dream image:",
@@ -256,7 +275,10 @@ export default function Home() {
       setLoading(false);
     } else {
       try {
-        const fullReply = await sendMessageToBackendPatched(input, currentImageUrl);
+        const fullReply = await sendMessageToBackendPatched(
+          input,
+          currentImageUrl
+        );
         const assistantMsg: ChatMessage = {
           role: "assistant",
           content: fullReply,
@@ -273,9 +295,7 @@ export default function Home() {
         setMessages((prev) => [
           ...prev,
           <div key={prev.length} className="w-full flex justify-start">
-            <div className="self-start text-red-500">
-              Error: {String(err)}
-            </div>
+            <div className="self-start text-red-500">Error: {String(err)}</div>
           </div>,
         ]);
       }
@@ -290,7 +310,7 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file || loading) return;
     setLoading(true);
-  
+
     const form = new FormData();
     form.append("file", file);
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
@@ -298,7 +318,7 @@ export default function Home() {
     const folder = process.env.NEXT_PUBLIC_CLOUDINARY_FOLDER;
     form.append("upload_preset", preset);
     if (folder) form.append("folder", folder);
-  
+
     try {
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
@@ -317,7 +337,6 @@ export default function Home() {
     e.target.value = "";
     setLoading(false);
   };
-  
 
   const handleClear = () => {
     setMessages([]);
@@ -422,25 +441,25 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 items-center mt-4 px-4 pb-4">
-          {currentImageUrl && (
-            <div className="flex items-center gap-4 px-4 pb-2 pt-2">
-              <NextImage
-                unoptimized
-                src={currentImageUrl}
-                alt="Preview"
-                width={100}
-                height={100}
-                className="rounded-lg border-2 border-yellow-400 shadow-md"
-              />
-              <button
-                onClick={() => setCurrentImageUrl(undefined)}
-                className="text-red-500 hover:underline text-sm"
-                disabled={loading}
-              >
-                ❌ Remove
-              </button>
-            </div>
-          )}
+            {currentImageUrl && (
+              <div className="flex items-center gap-4 px-4 pb-2 pt-2">
+                <NextImage
+                  unoptimized
+                  src={currentImageUrl}
+                  alt="Preview"
+                  width={100}
+                  height={100}
+                  className="rounded-lg border-2 border-yellow-400 shadow-md"
+                />
+                <button
+                  onClick={() => setCurrentImageUrl(undefined)}
+                  className="text-red-500 hover:underline text-sm"
+                  disabled={loading}
+                >
+                  ❌ Remove
+                </button>
+              </div>
+            )}
             <input
               type="text"
               className="flex-1 px-4 py-3 border-2 border-yellow-400 rounded-2xl bg-black text-yellow-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
