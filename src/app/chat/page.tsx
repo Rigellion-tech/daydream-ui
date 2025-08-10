@@ -10,6 +10,15 @@ import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
 import { isImageRequest, ChatMessage } from "@/lib/api";
 
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+
+function normalizeImageUrl(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  if (raw.startsWith("/")) return `${BACKEND_ORIGIN}${raw}`;
+  if (raw.startsWith("http://")) return raw.replace("http://", "https://");
+  return raw;
+}
+
 // Add the capitalizeFirst function here
 function capitalizeFirst(str: string) {
   if (!str) return "";
@@ -36,7 +45,7 @@ export default function Home() {
   const messageListRef = useRef<HTMLDivElement>(null);
   const user_id = useRef<string | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://www.daydreamforge.com";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
 
   useEffect(() => {
     // Try both cookie and localStorage for backward compatibility
@@ -416,6 +425,7 @@ export default function Home() {
           {currentImageUrl && (
             <div className="flex items-center gap-4 px-4 pb-2 pt-2">
               <NextImage
+                unoptimized
                 src={currentImageUrl}
                 alt="Preview"
                 width={100}

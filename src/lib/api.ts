@@ -1,5 +1,13 @@
 import Cookies from "js-cookie";
 
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL || "https://daydreamforge.onrender.com";
+function normalizeImageUrl(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  if (raw.startsWith("/")) return `${BACKEND_ORIGIN}${raw}`;
+  if (raw.startsWith("http://")) return raw.replace("http://", "https://");
+  return raw;
+}
+
 // --- Typed interfaces for API requests & responses ---
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -117,11 +125,13 @@ export async function generateImage(
       return "";
     }
 
-    if (!res.ok || data.error || !data.imageUrl) {
+    if (!res.ok || data.error) {
       console.error(`Image API error: ${data.error || res.status}`);
       return "";
     }
-    return data.imageUrl;
+    const rawUrl = data.image_url ?? data.imageUrl ?? data.secure_url ?? data.url;
+    const url = normalizeImageUrl(rawUrl);
+    return url || "";
   } catch (err) {
     console.error("generateImage failed:", err);
     return "";
