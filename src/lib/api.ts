@@ -28,12 +28,6 @@ interface ChatResponse {
   error?: string;
 }
 
-// Public shape used by the app
-interface ImageResponse {
-  imageUrl?: string;
-  error?: string;
-}
-
 // Private "wire" shape that covers all server variants
 type WireImageResponse = {
   image_url?: string;   // snake_case from /generate-image
